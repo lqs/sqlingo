@@ -1,5 +1,9 @@
 <img src="https://raw.githubusercontent.com/lqs/sqlingo/master/logo.png" width="236" height="106">
 
+[![Travis CI](https://travis-ci.org/lqs/sqlingo.svg?branch=master)](https://travis-ci.org/lqs/sqlingo)
+[![Go Report Card](https://goreportcard.com/badge/github.com/lqs/sqlingo)](https://goreportcard.com/report/github.com/lqs/sqlingo)
+[![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
+
 **sqlingo** is a SQL DSL & ORM library in Go. It generates code from your database and lets you write SQL queries easily.
 
 WARNING: sqlingo is still under development. It's expected to be released by end of November 2018.
