@@ -88,7 +88,7 @@ func (s *selectStatus) GetFields() []Field {
 	return fields
 }
 
-func (d *Database) Select(fields ... interface{}) SelectWithFields {
+func (d *Database) Select(fields ...interface{}) SelectWithFields {
 	select_ := &selectStatus{database: d}
 	for _, field := range fields {
 		sql, priority := getSQLFromWhatever(field)

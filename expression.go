@@ -131,7 +131,7 @@ func getSQLFromWhatever(value interface{}) (sql string, priority int) {
 15 XOR
 16 OR, ||
 17 = (assignment), :=
- */
+*/
 func (e *expression) NotEquals(other interface{}) BooleanExpression {
 	return e.binaryOperation("<>", other, 11)
 }

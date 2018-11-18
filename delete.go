@@ -38,8 +38,6 @@ func (s *deleteStatus) Where(conditions ...BooleanExpression) DeleteWithWhere {
 func (s *deleteStatus) GetSQL() (string, error) {
 	sqlString := getCallerInfo() + "DELETE FROM " + (*s.table).GetSQL() + " WHERE " + (*s.where).GetSQL()
 
-
-
 	return sqlString, nil
 }
 

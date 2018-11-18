@@ -23,19 +23,19 @@ func (s *insertStatus) copy() *insertStatus {
 }
 
 type InsertWithTable interface {
-	Fields(fields ... Field) InsertWithValues
-	Values(values ... interface{}) InsertWithValues
-	Models(models ... interface{}) InsertWithModels
+	Fields(fields ...Field) InsertWithValues
+	Values(values ...interface{}) InsertWithValues
+	Models(models ...interface{}) InsertWithModels
 }
 
 type InsertWithValues interface {
-	Values(values ... interface{}) InsertWithValues
+	Values(values ...interface{}) InsertWithValues
 	OnDuplicateKeyUpdate() InsertWithOnDuplicateKeyUpdateBegin
 	Execute() (result sql.Result, err error)
 }
 
 type InsertWithModels interface {
-	Models(models ... interface{}) InsertWithModels
+	Models(models ...interface{}) InsertWithModels
 	OnDuplicateKeyUpdate() InsertWithOnDuplicateKeyUpdateBegin
 	GetSQL() (string, error)
 	Execute() (result sql.Result, err error)
@@ -55,13 +55,13 @@ func (d *Database) InsertInto(table Table) InsertWithTable {
 	return &insertStatus{database: d, table: &table}
 }
 
-func (s *insertStatus) Fields(fields ... Field) InsertWithValues {
+func (s *insertStatus) Fields(fields ...Field) InsertWithValues {
 	insert := s.copy()
 	insert.fields = fields
 	return insert
 }
 
-func (s *insertStatus) Values(values ... interface{}) InsertWithValues {
+func (s *insertStatus) Values(values ...interface{}) InsertWithValues {
 	insert := s.copy()
 	insert.values = append(insert.values, values)
 	return insert
@@ -90,7 +90,7 @@ func (s *insertStatus) addModel(model interface{}) {
 	}
 }
 
-func (s *insertStatus) Models(models ... interface{}) InsertWithModels {
+func (s *insertStatus) Models(models ...interface{}) InsertWithModels {
 	if len(models) == 0 {
 		return s
 	}
