@@ -22,7 +22,7 @@ $ sqlingo-gen root:123456@/database_name >generated/sqlingo/database_name.dsl.go
 
 ### Start using sqlingo
 Create `main.go` to use the generated code
-```
+```go
 import (
     "github.com/lqs/sqlingo"
     "./generated/sqlingo"
