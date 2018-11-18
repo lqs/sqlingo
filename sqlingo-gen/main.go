@@ -23,4 +23,3 @@ func main() {
 
 	fmt.Print(code)
 }
-
