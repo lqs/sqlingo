@@ -3,6 +3,7 @@ package sqlingo
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"go/format"
 	"regexp"
 	"strconv"
@@ -45,19 +46,19 @@ func getType(s string, nullable bool) (goType string, fieldClass string, err err
 	case "smallint":
 		goType = "int16"
 		fieldClass = "NumberField"
-	case "int":
+	case "int", "mediumint":
 		goType = "int32"
 		fieldClass = "NumberField"
 	case "bigint":
 		goType = "int64"
 		fieldClass = "NumberField"
-	case "float", "double":
+	case "float", "double", "decimal":
 		goType = "float64"
 		fieldClass = "NumberField"
-	case "char", "varchar", "text", "mediumtext", "longtext", "enum", "datetime":
+	case "char", "varchar", "text", "tinytext", "mediumtext", "longtext", "enum", "datetime", "date", "time", "timestamp":
 		goType = "string"
 		fieldClass = "StringField"
-	case "blob":
+	case "blob", "tinyblob", "mediumblob", "longblob":
 		goType = "[]byte"
 		fieldClass = "StringField"
 	case "bit":
@@ -68,6 +69,9 @@ func getType(s string, nullable bool) (goType string, fieldClass string, err err
 			goType = "string"
 			fieldClass = "StringField"
 		}
+	default:
+		err = fmt.Errorf("unknown field type %s", fieldType)
+		return
 	}
 	if nullable {
 		goType = "*" + goType
@@ -119,6 +123,7 @@ func Generate(driverName string, dataSourceName string, tableNames *[]string) (s
 	}
 
 	for _, tableName := range *tableNames {
+		println("Generating", tableName)
 		rows, err := mysql.Query("SHOW FULL COLUMNS FROM " + getSQLForName(tableName))
 		if err != nil {
 			return "", err
@@ -160,7 +165,10 @@ func Generate(driverName string, dataSourceName string, tableNames *[]string) (s
 			}
 
 			goName := convertCase(row["Field"])
-			goType, fieldClass, _ := getType(row["Type"], row["Null"] == "YES")
+			goType, fieldClass, err := getType(row["Type"], row["Null"] == "YES")
+			if err != nil {
+				return "", err
+			}
 
 			fieldStructName := "f" + className + goName
 
