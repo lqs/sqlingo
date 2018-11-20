@@ -164,9 +164,9 @@ func Generate(driverName string, dataSourceName string, tableNames *[]string) (s
 
 			fieldStructName := "f" + className + goName
 
-			tableLines += "\t" + goName + " *" + fieldStructName + "\n"
+			tableLines += "\t" + goName + " " + fieldStructName + "\n"
 			modelLines += "\t" + goName + " " + goType + "\n"
-			objectLines += "\t" + goName + ": &" + fieldStructName + "{"
+			objectLines += "\t" + goName + ": " + fieldStructName + "{"
 			objectLines += "New" + fieldClass + "(" + wrapQuote(tableName) + ", " + wrapQuote(row["Field"]) + ")},\n"
 			classLines += "type " + fieldStructName + " struct{ " + fieldClass + " }\n"
 
@@ -182,7 +182,7 @@ func Generate(driverName string, dataSourceName string, tableNames *[]string) (s
 
 		code += classLines
 
-		code += "var " + className + " = &" + tableStructName + "{\n"
+		code += "var " + className + " = " + tableStructName + "{\n"
 		code += objectLines
 		code += "}\n\n"
 
