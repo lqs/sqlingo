@@ -60,8 +60,8 @@ func Or(expressions ...BooleanExpression) (result BooleanExpression) {
 	return
 }
 
-func Function(name string, args ...Expression) Expression {
-	return &expression{sql: name + "(" + commaExpressions(args) + ")"}
+func Function(name string, args ...interface{}) Expression {
+	return &expression{sql: name + "(" + commaValues(args) + ")"}
 }
 
 func If(predicate Expression, trueValue Expression, falseValue Expression) (result Expression) {
