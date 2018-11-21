@@ -12,6 +12,7 @@ type Select interface {
 	FetchFirst(out ...interface{}) error
 	FetchAll(out interface{}) error
 	FetchCursor() (Cursor, error)
+	Exists() (bool, error)
 }
 
 type SelectWithFields interface {
@@ -22,6 +23,7 @@ type SelectWithFields interface {
 type SelectWithTables interface {
 	Select
 	SelectOrderBy
+	Count() (int, error)
 	Where(conditions ...BooleanExpression) SelectWithWhere
 	GroupBy(expressions ...Expression) SelectWithGroupBy
 }
@@ -29,7 +31,7 @@ type SelectWithTables interface {
 type SelectWithWhere interface {
 	Select
 	SelectOrderBy
-
+	Count() (int, error)
 	GroupBy(expressions ...Expression) SelectWithGroupBy
 }
 
@@ -154,6 +156,19 @@ func (s *selectStatus) Offset(offset int) SelectWithOffset {
 	select_ := s.copy()
 	select_.limit = &offset
 	return select_
+}
+
+func (s *selectStatus) Count() (count int, err error) {
+	select_ := s.copy()
+	select_.fields = []Field{Function("COUNT", 1)}
+
+	err = select_.FetchFirst(&count)
+	return
+}
+
+func (s *selectStatus) Exists() (exists bool, err error) {
+	err = s.database.Select(Function("EXISTS", s)).FetchFirst(&exists)
+	return
 }
 
 func (s *selectStatus) GetSQL() string {
