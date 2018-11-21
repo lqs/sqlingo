@@ -1,6 +1,7 @@
 package sqlingo
 
 import (
+	"errors"
 	"reflect"
 	"strconv"
 )
@@ -8,7 +9,8 @@ import (
 type Select interface {
 	GetFields() []Field
 	GetSQL() string
-	Fetch(out ...interface{}) error
+	FetchFirst(out ...interface{}) error
+	FetchAll(out interface{}) error
 	FetchCursor() (Cursor, error)
 }
 
@@ -47,20 +49,17 @@ type SelectOrderBy interface {
 }
 
 type SelectWithOrder interface {
+	Select
 	Limit(limit int) SelectWithLimit
-	Fetch(out ...interface{}) error
-	FetchCursor() (Cursor, error)
 }
 
 type SelectWithLimit interface {
+	Select
 	Offset(offset int) SelectWithOffset
-	Fetch(out ...interface{}) error
-	FetchCursor() (Cursor, error)
 }
 
 type SelectWithOffset interface {
-	Fetch(out ...interface{}) error
-	FetchCursor() (Cursor, error)
+	Select
 }
 
 type selectStatus struct {
@@ -207,31 +206,7 @@ func (s *selectStatus) FetchCursor() (Cursor, error) {
 	return cursor, nil
 }
 
-func (s *selectStatus) Fetch(dest ...interface{}) error {
-	if len(dest) == 1 {
-		if reflect.ValueOf(dest[0]).Kind() == reflect.Ptr {
-			val := reflect.Indirect(reflect.ValueOf(dest[0]))
-			if val.Kind() == reflect.Slice {
-				cursor, err := s.FetchCursor()
-				if err != nil {
-					return err
-				}
-				defer cursor.Close()
-
-				for cursor.Next() {
-					if err != nil {
-						return err
-					}
-					elem := reflect.New(val.Type().Elem())
-					row := elem.Interface()
-					cursor.Scan(row)
-					val.Set(reflect.Append(val, reflect.Indirect(elem)))
-				}
-				return nil
-			}
-		}
-	}
-
+func (s *selectStatus) FetchFirst(dest ...interface{}) error {
 	cursor, err := s.FetchCursor()
 	if err != nil {
 		return err
@@ -247,4 +222,31 @@ func (s *selectStatus) Fetch(dest ...interface{}) error {
 	}
 
 	return nil
+}
+
+func (s *selectStatus) FetchAll(dest interface{}) error {
+	if reflect.ValueOf(dest).Kind() != reflect.Ptr {
+		return errors.New("dest should be a pointer")
+	}
+	val := reflect.Indirect(reflect.ValueOf(dest))
+	if val.Kind() == reflect.Slice {
+		cursor, err := s.FetchCursor()
+		if err != nil {
+			return err
+		}
+		defer cursor.Close()
+
+		for cursor.Next() {
+			if err != nil {
+				return err
+			}
+			elem := reflect.New(val.Type().Elem())
+			row := elem.Interface()
+			cursor.Scan(row)
+			val.Set(reflect.Append(val, reflect.Indirect(elem)))
+		}
+		return nil
+	}
+	return nil
+
 }
