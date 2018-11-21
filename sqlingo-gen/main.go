@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/lqs/sqlingo"
 	"os"
 )
 
@@ -16,7 +15,7 @@ func main() {
 
 	dataSourceName := os.Args[1]
 
-	code, err := sqlingo.Generate("mysql", dataSourceName, nil)
+	code, err := generate("mysql", dataSourceName, nil)
 	if err != nil {
 		panic(err)
 	}
