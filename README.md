@@ -51,7 +51,7 @@ func main() {
     var customers []*CustomerModel
     db.SelectFrom(Customer).
         Where(Customer.Id.In(1, 2)).
-        Fetch(&customers)
+        FetchAll(&customers)
 
     // more examples
     var customerId int64
@@ -59,6 +59,6 @@ func main() {
     db.Select(Customer.Id, Order.Id).
         From(Customer, Order).
         Where(Customer.Id.Equals(Order.CustomerId), Order.Id.Equals(1)).
-        Fetch(&customerId, &orderId)
+        FetchFirst(&customerId, &orderId)
 }
 ```
