@@ -24,6 +24,8 @@ type Expression interface {
 	Desc() OrderBy
 
 	As(alias string) Alias
+
+	IfNull(altValue interface{}) Expression
 }
 
 type BooleanExpression interface {
@@ -71,6 +73,10 @@ type expression struct {
 
 func (e *expression) As(name string) Alias {
 	return &alias{expression: e, name: name}
+}
+
+func (e *expression) IfNull(altValue interface{}) Expression {
+	return Function("IFNULL", e, altValue)
 }
 
 func (e *expression) GetSQL() string {
