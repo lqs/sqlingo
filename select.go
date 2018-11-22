@@ -244,24 +244,23 @@ func (s *selectStatus) FetchAll(dest interface{}) error {
 		return errors.New("dest should be a pointer")
 	}
 	val := reflect.Indirect(reflect.ValueOf(dest))
-	if val.Kind() == reflect.Slice {
-		cursor, err := s.FetchCursor()
+	if val.Kind() != reflect.Slice {
+		return errors.New("dest should be pointed to a slice")
+	}
+	cursor, err := s.FetchCursor()
+	if err != nil {
+		return err
+	}
+	defer cursor.Close()
+
+	for cursor.Next() {
+		elem := reflect.New(val.Type().Elem())
+		row := elem.Interface()
+		err = cursor.Scan(row)
 		if err != nil {
 			return err
 		}
-		defer cursor.Close()
-
-		for cursor.Next() {
-			if err != nil {
-				return err
-			}
-			elem := reflect.New(val.Type().Elem())
-			row := elem.Interface()
-			cursor.Scan(row)
-			val.Set(reflect.Append(val, reflect.Indirect(elem)))
-		}
-		return nil
+		val.Set(reflect.Append(val, reflect.Indirect(elem)))
 	}
 	return nil
-
 }
