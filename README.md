@@ -6,7 +6,7 @@
 
 **sqlingo** is a SQL DSL & ORM library in Go. It generates code from your database and lets you write SQL queries easily.
 
-WARNING: sqlingo is still under development. It's expected to be released by end of November 2018.
+**WARNING: sqlingo is still under development. It's expected to be released in December 2018.**
 
 ## Tutorial
 
