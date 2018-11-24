@@ -26,6 +26,7 @@ type SelectWithTables interface {
 	Count() (int, error)
 	Where(conditions ...BooleanExpression) SelectWithWhere
 	GroupBy(expressions ...Expression) SelectWithGroupBy
+	Limit(limit int) SelectWithLimit
 }
 
 type SelectWithWhere interface {
@@ -65,7 +66,7 @@ type SelectWithOffset interface {
 }
 
 type selectStatus struct {
-	database *Database
+	database Database
 	fields   []Field
 	tables   []*Table
 	where    *BooleanExpression
@@ -89,7 +90,7 @@ func (s *selectStatus) GetFields() []Field {
 	return fields
 }
 
-func (d *Database) Select(fields ...interface{}) SelectWithFields {
+func (d *database) Select(fields ...interface{}) SelectWithFields {
 	select_ := &selectStatus{database: d}
 	for _, field := range fields {
 		sql, priority := getSQLFromWhatever(field)
@@ -107,7 +108,7 @@ func (s *selectStatus) From(tables ...Table) SelectWithTables {
 	return select_
 }
 
-func (d *Database) SelectFrom(tables ...Table) SelectWithTables {
+func (d *database) SelectFrom(tables ...Table) SelectWithTables {
 	select_ := selectStatus{database: d}
 	for _, table := range tables {
 		select_.tables = append(select_.tables, &table)
@@ -172,7 +173,7 @@ func (s *selectStatus) Exists() (exists bool, err error) {
 }
 
 func (s *selectStatus) GetSQL() string {
-	sql := getCallerInfo() + "SELECT " + commaFields(s.fields)
+	sql := getCallerInfo(s.database) + "SELECT " + commaFields(s.fields)
 
 	if len(s.tables) > 0 {
 		var values []interface{}

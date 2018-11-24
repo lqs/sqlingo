@@ -5,7 +5,7 @@ import (
 )
 
 type updateStatus struct {
-	database    *Database
+	database    Database
 	table       *Table
 	assignments []assignment
 	where       *BooleanExpression
@@ -17,7 +17,7 @@ func (s *updateStatus) copy() *updateStatus {
 	return &update
 }
 
-func (d *Database) Update(table Table) UpdateWithTable {
+func (d *database) Update(table Table) UpdateWithTable {
 	return &updateStatus{database: d, table: &table}
 }
 
@@ -64,7 +64,7 @@ func (s *updateStatus) Where(conditions ...BooleanExpression) UpdateWithWhere {
 }
 
 func (s *updateStatus) GetSQL() (string, error) {
-	sqlString := getCallerInfo() + "UPDATE " + (*s.table).GetSQL() +
+	sqlString := getCallerInfo(s.database) + "UPDATE " + (*s.table).GetSQL() +
 		" SET " + commaAssignments(s.assignments) +
 		" WHERE " + (*s.where).GetSQL()
 

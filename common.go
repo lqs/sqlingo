@@ -129,7 +129,14 @@ func getSQLForName(name string) string {
 	return "`" + name + "`"
 }
 
-func getCallerInfo() string {
+func getCallerInfo(db Database) string {
+	txInfo := ""
+	switch db.(type) {
+	case *database:
+		if db.(*database).tx != nil {
+			txInfo = " tx"
+		}
+	}
 	for i := 0; true; i++ {
 		_, file, line, ok := runtime.Caller(i)
 		if !ok {
@@ -141,7 +148,7 @@ func getCallerInfo() string {
 		case "common.go", "select.go", "insert.go", "update.go", "delete.go":
 			continue
 		default:
-			return fmt.Sprintf("/* %s:%d */ ", name, line)
+			return fmt.Sprintf("/* %s:%d%s */ ", name, line, txInfo)
 		}
 	}
 	return ""

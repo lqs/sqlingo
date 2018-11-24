@@ -6,7 +6,7 @@ import (
 )
 
 type insertStatus struct {
-	database                        *Database
+	database                        Database
 	table                           *Table
 	fields                          []Field
 	values                          []interface{}
@@ -51,7 +51,7 @@ type InsertWithOnDuplicateKeyUpdate interface {
 	Execute() (result sql.Result, err error)
 }
 
-func (d *Database) InsertInto(table Table) InsertWithTable {
+func (d *database) InsertInto(table Table) InsertWithTable {
 	return &insertStatus{database: d, table: &table}
 }
 
@@ -129,7 +129,7 @@ func (s *insertStatus) GetSQL() (string, error) {
 		values = s.values
 	}
 
-	sqlString := getCallerInfo() + "INSERT INTO " + (*s.table).GetSQL() + " (" + commaFields(fields) + ") VALUES " + commaValues(values)
+	sqlString := getCallerInfo(s.database) + "INSERT INTO " + (*s.table).GetSQL() + " (" + commaFields(fields) + ") VALUES " + commaValues(values)
 	if len(s.onDuplicateKeyUpdateAssignments) > 0 {
 		sqlString += " ON DUPLICATE KEY UPDATE " + commaAssignments(s.onDuplicateKeyUpdateAssignments)
 	}

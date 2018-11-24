@@ -1,23 +1,44 @@
 package sqlingo
 
 import (
+	"context"
 	"database/sql"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"time"
 )
 
-type Database struct {
+type Database interface {
+	SetDebugMode(debugMode bool)
+	GetDB() *sql.DB
+	BeginTx(ctx context.Context, opts *sql.TxOptions, f func(tx Transaction) error) error
+	Query(sql string) (Cursor, error)
+	Execute(sql string) (sql.Result, error)
+
+	Select(fields ...interface{}) SelectWithFields
+	SelectFrom(tables ...Table) SelectWithTables
+	InsertInto(table Table) InsertWithTable
+	Update(table Table) UpdateWithTable
+	DeleteFrom(table Table) DeleteWithTable
+}
+
+type txOrDB interface {
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	Exec(query string, args ...interface{}) (sql.Result, error)
+}
+
+type database struct {
 	db        *sql.DB
+	tx        *sql.Tx
 	debugMode bool
 	dialect   string
 }
 
-func (d *Database) SetDebugMode(debugMode bool) {
+func (d *database) SetDebugMode(debugMode bool) {
 	d.debugMode = debugMode
 }
 
-func Open(driverName string, dataSourceName string) (db *Database, err error) {
+func Open(driverName string, dataSourceName string) (db Database, err error) {
 	var sqlDB *sql.DB
 	if dataSourceName != "" {
 		sqlDB, err = sql.Open(driverName, dataSourceName)
@@ -25,20 +46,28 @@ func Open(driverName string, dataSourceName string) (db *Database, err error) {
 			return
 		}
 	}
-	db = &Database{
+	db = &database{
 		dialect: driverName,
 		db:      sqlDB,
 	}
 	return
 }
 
-func (d *Database) GetDB() *sql.DB {
+func (d *database) GetDB() *sql.DB {
 	return d.db
 }
 
-func (d *Database) Query(sql string) (Cursor, error) {
+func (d *database) getTxOrDB() txOrDB {
+	if d.tx != nil {
+		return d.tx
+	} else {
+		return d.db
+	}
+}
+
+func (d *database) Query(sql string) (Cursor, error) {
 	startTime := time.Now().UnixNano()
-	rows, err := d.db.Query(sql)
+	rows, err := d.getTxOrDB().Query(sql)
 	endTime := time.Now().UnixNano()
 	printLog(endTime-startTime, sql)
 	if err != nil {
@@ -47,9 +76,9 @@ func (d *Database) Query(sql string) (Cursor, error) {
 	return &cursor{rows: rows}, nil
 }
 
-func (d *Database) Execute(sql string) (sql.Result, error) {
+func (d *database) Execute(sql string) (sql.Result, error) {
 	startTime := time.Now().UnixNano()
-	result, err := d.db.Exec(sql)
+	result, err := d.getTxOrDB().Exec(sql)
 	endTime := time.Now().UnixNano()
 	printLog(endTime-startTime, sql)
 	return result, err
