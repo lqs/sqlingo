@@ -4,22 +4,17 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/lqs/sqlingo)](https://goreportcard.com/report/github.com/lqs/sqlingo)
 [![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
 
-**sqlingo** is a SQL DSL & ORM library in Go. It generates code from your database and lets you write SQL queries easily.
+**sqlingo** is a SQL DSL library in Go. It generates code from the database and lets you write SQL easily and correctly.
 
 **WARNING: sqlingo is still under development. It's expected to be released in December 2018.**
 
 ## Tutorial
 
-### Prepare your database
+### Install and use sqlingo code generator
 In order to generate code, sqlingo requires your tables are already created in the database.
 
-### Install sqlingo code generator
 ```
 $ go get -u github.com/lqs/sqlingo/sqlingo-gen
-```
-
-### Generate code for your database
-```
 $ mkdir -p generated/sqlingo
 $ sqlingo-gen root:123456@/database_name >generated/sqlingo/database_name.dsl.go
 ```
