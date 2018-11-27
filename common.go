@@ -81,6 +81,24 @@ func Function(name string, args ...interface{}) Expression {
 	return function(name, args...)
 }
 
+func command(args ...interface{}) expression {
+	return expression{builder: func(scope scope) (string, error) {
+		sql := ""
+		for i, item := range args {
+			if i > 0 {
+				sql += " "
+			}
+			itemSql, _, err := getSQLFromWhatever(scope, item)
+			if err != nil {
+				return "", err
+			}
+			sql += itemSql
+
+		}
+		return sql, nil
+	}}
+}
+
 func If(predicate Expression, trueValue Expression, falseValue Expression) (result Expression) {
 	return Function("IF", predicate, trueValue, falseValue)
 }

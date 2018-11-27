@@ -114,6 +114,10 @@ func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority in
 		sql, err = value.(Assignment).GetSQL(scope)
 	case Select:
 		sql, err = value.(Select).GetSQL()
+		if err != nil {
+			return
+		}
+		sql = "(" + sql + ")"
 	case Table:
 		sql = value.(Table).GetSQL(scope)
 	case int, int8, int16, int32, int64:
@@ -253,9 +257,9 @@ func (e expression) binaryOperation(operator string, value interface{}, priority
 	}, priority: priority}
 }
 
-func (e expression) prefixSuffixExpression(prefix string, expr Expression, suffix string, priority int) *expression {
+func (e expression) prefixSuffixExpression(prefix string, suffix string, priority int) *expression {
 	return &expression{builder: func(scope scope) (string, error) {
-		exprSql, err := expr.GetSQL(scope)
+		exprSql, err := e.GetSQL(scope)
 		if err != nil {
 			return "", err
 		}
@@ -264,15 +268,15 @@ func (e expression) prefixSuffixExpression(prefix string, expr Expression, suffi
 }
 
 func (e expression) IsNull() BooleanExpression {
-	return e.prefixSuffixExpression("", e, " IS NULL", 11)
+	return e.prefixSuffixExpression("", " IS NULL", 11)
 }
 
 func (e expression) Not() BooleanExpression {
-	return e.prefixSuffixExpression("NOT ", e, "", 13)
+	return e.prefixSuffixExpression("NOT ", "", 13)
 }
 
 func (e expression) IsNotNull() BooleanExpression {
-	return e.prefixSuffixExpression("", e, " IS NOT NULL", 11)
+	return e.prefixSuffixExpression("", " IS NOT NULL", 11)
 }
 
 func (e expression) In(values ...interface{}) BooleanExpression {
