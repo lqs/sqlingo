@@ -50,10 +50,12 @@ func preparePointers(val reflect.Value, scans *[]interface{}) error {
 		default:
 			to := reflect.New(toType).Elem()
 			val.Set(to.Addr())
-			preparePointers(to, scans)
+			err := preparePointers(to, scans)
+			if err != nil {
+				return nil
+			}
 		}
 	default:
-		println("unknown type %s", kind.String())
 		return fmt.Errorf("unknown type %s", kind.String())
 	}
 	return nil
@@ -69,7 +71,10 @@ func (c *cursor) Scan(dest ...interface{}) error {
 
 		val := reflect.Indirect(reflect.ValueOf(item))
 
-		preparePointers(val, &scans)
+		err := preparePointers(val, &scans)
+		if err != nil {
+			return err
+		}
 	}
 
 	err := c.rows.Scan(scans...)

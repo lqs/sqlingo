@@ -14,9 +14,8 @@ type DeleteWithWhere interface {
 }
 
 type deleteStatus struct {
-	database Database
-	table    *Table
-	where    *BooleanExpression
+	scope scope
+	where BooleanExpression
 }
 
 func (s *deleteStatus) copy() *deleteStatus {
@@ -25,18 +24,21 @@ func (s *deleteStatus) copy() *deleteStatus {
 }
 
 func (d *database) DeleteFrom(table Table) DeleteWithTable {
-	return &deleteStatus{database: d, table: &table}
+	return &deleteStatus{scope: scope{Database: d, Tables: []Table{table}}}
 }
 
 func (s *deleteStatus) Where(conditions ...BooleanExpression) DeleteWithWhere {
 	delete_ := s.copy()
-	condition := And(conditions...)
-	delete_.where = &condition
+	delete_.where = And(conditions...)
 	return delete_
 }
 
 func (s *deleteStatus) GetSQL() (string, error) {
-	sqlString := getCallerInfo(s.database) + "DELETE FROM " + (*s.table).GetSQL() + " WHERE " + (*s.where).GetSQL()
+	whereSql, err := s.where.GetSQL(s.scope)
+	if err != nil {
+		return "", err
+	}
+	sqlString := "DELETE FROM " + s.scope.Tables[0].GetSQL(s.scope) + " WHERE " + whereSql
 
 	return sqlString, nil
 }
@@ -46,5 +48,5 @@ func (s *deleteStatus) Execute() (sql.Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	return s.database.Execute(sqlString)
+	return s.scope.Database.Execute(sqlString)
 }

@@ -7,12 +7,12 @@ import (
 )
 
 type Select interface {
-	GetFields() []Field
-	GetSQL() string
-	FetchFirst(out ...interface{}) error
+	GetSQL() (string, error)
+	FetchFirst(out ...interface{}) (bool, error)
 	FetchAll(out interface{}) error
 	FetchCursor() (Cursor, error)
 	Exists() (bool, error)
+	Count() (int, error)
 }
 
 type SelectWithFields interface {
@@ -23,7 +23,6 @@ type SelectWithFields interface {
 type SelectWithTables interface {
 	Select
 	SelectOrderBy
-	Count() (int, error)
 	Where(conditions ...BooleanExpression) SelectWithWhere
 	GroupBy(expressions ...Expression) SelectWithGroupBy
 	Limit(limit int) SelectWithLimit
@@ -32,7 +31,6 @@ type SelectWithTables interface {
 type SelectWithWhere interface {
 	Select
 	SelectOrderBy
-	Count() (int, error)
 	GroupBy(expressions ...Expression) SelectWithGroupBy
 }
 
@@ -66,36 +64,33 @@ type SelectWithOffset interface {
 }
 
 type selectStatus struct {
-	database Database
+	scope    scope
 	fields   []Field
-	tables   []*Table
-	where    *BooleanExpression
+	where    BooleanExpression
 	orderBys []OrderBy
 	groupBys []Expression
-	having   *BooleanExpression
+	having   BooleanExpression
 	limit    *int
 	offset   *int
-	lock     string
 }
 
 func (s *selectStatus) copy() *selectStatus {
 	select_ := *s
-	select_.fields = s.GetFields()
 	return &select_
 }
 
-func (s *selectStatus) GetFields() []Field {
-	var fields []Field
-	fields = append(fields, s.fields...)
-	return fields
-}
-
 func (d *database) Select(fields ...interface{}) SelectWithFields {
-	select_ := &selectStatus{database: d}
+	select_ := &selectStatus{scope: scope{Database: d}}
 	for _, field := range fields {
-		sql, priority := getSQLFromWhatever(field)
-		expression := &expression{sql: sql, priority: priority}
-		select_.fields = append(select_.fields, expression)
+		fieldCopy := field
+		fieldExpression := expression{builder: func(scope scope) (string, error) {
+			sql, _, err := getSQLFromWhatever(scope, fieldCopy)
+			if err != nil {
+				return "", err
+			}
+			return sql, nil
+		}}
+		select_.fields = append(select_.fields, fieldExpression)
 	}
 	return select_
 }
@@ -103,15 +98,15 @@ func (d *database) Select(fields ...interface{}) SelectWithFields {
 func (s *selectStatus) From(tables ...Table) SelectWithTables {
 	select_ := s.copy()
 	for _, table := range tables {
-		select_.tables = append(select_.tables, &table)
+		select_.scope.Tables = append(select_.scope.Tables, table)
 	}
 	return select_
 }
 
 func (d *database) SelectFrom(tables ...Table) SelectWithTables {
-	select_ := selectStatus{database: d}
+	select_ := selectStatus{scope: scope{Database: d}}
 	for _, table := range tables {
-		select_.tables = append(select_.tables, &table)
+		select_.scope.Tables = append(select_.scope.Tables, table)
 		fields := table.GetFields()
 		for _, field := range fields {
 			select_.fields = append(select_.fields, field)
@@ -123,8 +118,7 @@ func (d *database) SelectFrom(tables ...Table) SelectWithTables {
 
 func (s *selectStatus) Where(conditions ...BooleanExpression) SelectWithWhere {
 	select_ := s.copy()
-	condition := And(conditions...)
-	select_.where = &condition
+	select_.where = And(conditions...)
 	return select_
 }
 
@@ -136,8 +130,7 @@ func (s *selectStatus) GroupBy(expressions ...Expression) SelectWithGroupBy {
 
 func (s *selectStatus) Having(conditions ...BooleanExpression) SelectWithGroupByHaving {
 	select_ := s.copy()
-	condition := And(conditions...)
-	select_.having = &condition
+	select_.having = And(conditions...)
 	return select_
 }
 
@@ -161,42 +154,67 @@ func (s *selectStatus) Offset(offset int) SelectWithOffset {
 
 func (s *selectStatus) Count() (count int, err error) {
 	select_ := s.copy()
-	select_.fields = []Field{Function("COUNT", 1)}
+	select_.fields = []Field{staticExpression("COUNT(1)", 0)}
 
-	err = select_.FetchFirst(&count)
+	_, err = select_.FetchFirst(&count)
 	return
 }
 
 func (s *selectStatus) Exists() (exists bool, err error) {
-	err = s.database.Select(Function("EXISTS", s)).FetchFirst(&exists)
+	_, err = s.scope.Database.Select(Function("EXISTS", s)).FetchFirst(&exists)
 	return
 }
 
-func (s *selectStatus) GetSQL() string {
-	sql := getCallerInfo(s.database) + "SELECT " + commaFields(s.fields)
+func (s *selectStatus) GetSQL() (string, error) {
+	selectSql, err := commaFields(s.scope, s.fields)
+	if err != nil {
+		return "", err
+	}
 
-	if len(s.tables) > 0 {
+	sql := "SELECT " + selectSql
+
+	if len(s.scope.Tables) > 0 {
 		var values []interface{}
-		for _, table := range s.tables {
+		for _, table := range s.scope.Tables {
 			values = append(values, table)
 		}
-		sql += " FROM " + commaValues(values)
+		fromSql, err := commaValues(s.scope, values)
+		if err != nil {
+			return "", err
+		}
+		sql += " FROM " + fromSql
 	}
 
 	if s.where != nil {
-		sql += " WHERE " + (*s.where).GetSQL()
+		whereSql, err := s.where.GetSQL(s.scope)
+		if err != nil {
+			return "", err
+		}
+		sql += " WHERE " + whereSql
 	}
 
 	if len(s.groupBys) != 0 {
-		sql += " GROUP BY " + commaExpressions(s.groupBys)
+		groupBySql, err := commaExpressions(s.scope, s.groupBys)
+		if err != nil {
+			return "", err
+		}
+		sql += " GROUP BY " + groupBySql
 
 		if s.having != nil {
-			sql += " HAVING " + (*s.having).GetSQL()
+			havingSql, err := s.having.GetSQL(s.scope)
+			if err != nil {
+				return "", err
+			}
+			sql += " HAVING " + havingSql
 		}
 	}
 
 	if len(s.orderBys) > 0 {
-		sql += " ORDER BY " + commaOrderBys(s.orderBys)
+		orderBySql, err := commaOrderBys(s.scope, s.orderBys)
+		if err != nil {
+			return "", err
+		}
+		sql += " ORDER BY " + orderBySql
 	}
 
 	if s.limit != nil {
@@ -207,37 +225,39 @@ func (s *selectStatus) GetSQL() string {
 		sql += " OFFSET " + strconv.Itoa(*s.offset)
 	}
 
-	sql += s.lock
-
-	return sql
+	return sql, nil
 }
 
 func (s *selectStatus) FetchCursor() (Cursor, error) {
-	sqlString := s.GetSQL()
+	sqlString, err := s.GetSQL()
+	if err != nil {
+		return nil, err
+	}
 
-	cursor, err := s.database.Query(sqlString)
+	cursor, err := s.scope.Database.Query(sqlString)
 	if err != nil {
 		return nil, err
 	}
 	return cursor, nil
 }
 
-func (s *selectStatus) FetchFirst(dest ...interface{}) error {
+func (s *selectStatus) FetchFirst(dest ...interface{}) (ok bool, err error) {
 	cursor, err := s.FetchCursor()
 	if err != nil {
-		return err
+		return
 	}
 	defer cursor.Close()
 
 	for cursor.Next() {
 		err = cursor.Scan(dest...)
 		if err != nil {
-			return err
+			return
 		}
+		ok = true
 		break
 	}
 
-	return nil
+	return
 }
 
 func (s *selectStatus) FetchAll(dest interface{}) error {

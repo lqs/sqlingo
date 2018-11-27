@@ -1,13 +1,14 @@
 package sqlingo
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
 )
 
 type Expression interface {
-	GetSQL() string
+	GetSQL(scope scope) (string, error)
 	getOperatorPriority() int
 
 	NotEquals(other interface{}) BooleanExpression
@@ -26,6 +27,10 @@ type Expression interface {
 	As(alias string) Alias
 
 	IfNull(altValue interface{}) Expression
+}
+
+type Alias interface {
+	GetSQL(scope scope) (string, error)
 }
 
 type BooleanExpression interface {
@@ -67,56 +72,85 @@ type UnknownExpression interface {
 }
 
 type expression struct {
-	sql      string
+	builder  func(scope scope) (string, error)
 	priority int
 }
 
-func (e *expression) As(name string) Alias {
-	return &alias{expression: e, name: name}
+type scope struct {
+	Database Database
+	Tables   []Table
 }
 
-func (e *expression) IfNull(altValue interface{}) Expression {
+func staticExpression(sql string, priority int) expression {
+	return expression{builder: func(scope scope) (string, error) {
+		return sql, nil
+	}, priority: priority}
+}
+
+func (e expression) As(name string) Alias {
+	return &expression{builder: func(scope scope) (string, error) {
+		expressionSql, err := e.GetSQL(scope)
+		if err != nil {
+			return "", err
+		}
+		return expressionSql + " AS " + name, nil
+	}}
+}
+
+func (e expression) IfNull(altValue interface{}) Expression {
 	return Function("IFNULL", e, altValue)
 }
 
-func (e *expression) GetSQL() string {
-	return e.sql
+func (e expression) GetSQL(scope scope) (string, error) {
+	return e.builder(scope)
 }
 
-func getSQLFromWhatever(value interface{}) (sql string, priority int) {
+func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority int, err error) {
 	switch value.(type) {
 	case Expression:
-		return value.(Expression).GetSQL(), value.(Expression).getOperatorPriority()
+		sql, err = value.(Expression).GetSQL(scope)
+		priority = value.(Expression).getOperatorPriority()
 	case Assignment:
-		return value.(Assignment).GetSQL(), 0
+		sql, err = value.(Assignment).GetSQL(scope)
+	case Select:
+		sql, err = value.(Select).GetSQL()
+	case Table:
+		sql = value.(Table).GetSQL(scope)
 	case int, int8, int16, int32, int64:
-		return strconv.FormatInt(reflect.ValueOf(value).Int(), 10), 0
+		sql = strconv.FormatInt(reflect.ValueOf(value).Int(), 10)
 	case uint, uint8, uint16, uint32, uint64:
-		return strconv.FormatUint(reflect.ValueOf(value).Uint(), 10), 0
+		sql = strconv.FormatUint(reflect.ValueOf(value).Uint(), 10)
 	case string:
-		return "\"" + strings.Replace(value.(string), "\"", "\\\"", -1) + "\"", 0
+		sql = "\"" + strings.Replace(value.(string), "\"", "\\\"", -1) + "\""
 	case []interface{}:
-		return "(" + commaValues(value.([]interface{})) + ")", 0
+		sql, err = commaValues(scope, value.([]interface{}))
+		if err != nil {
+			return
+		}
+		sql = "(" + sql + ")"
 	default:
 		if value == nil {
-			return "NULL", 0
+			sql = "NULL"
+			return
 		}
 		v := reflect.ValueOf(value)
 		for v.Kind() == reflect.Ptr {
 			if v.IsNil() {
-				return "NULL", 0
+				sql = "NULL"
+				return
 			}
-			return getSQLFromWhatever(reflect.Indirect(v).Interface())
+			return getSQLFromWhatever(scope, reflect.Indirect(v).Interface())
 		}
 		switch v.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return getSQLFromWhatever(v.Int())
+			return getSQLFromWhatever(scope, v.Int())
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return getSQLFromWhatever(v.Uint())
+			return getSQLFromWhatever(scope, v.Uint())
 		default:
-			return "[invalid type " + v.Kind().String() + "]", 99
+			err = fmt.Errorf("invalid type %s", v.Kind().String())
 		}
 	}
+	return
 }
 
 /*
@@ -138,99 +172,110 @@ func getSQLFromWhatever(value interface{}) (sql string, priority int) {
 16 OR, ||
 17 = (assignment), :=
 */
-func (e *expression) NotEquals(other interface{}) BooleanExpression {
+func (e expression) NotEquals(other interface{}) BooleanExpression {
 	return e.binaryOperation("<>", other, 11)
 }
 
-func (e *expression) Equals(other interface{}) BooleanExpression {
+func (e expression) Equals(other interface{}) BooleanExpression {
 	return e.binaryOperation("=", other, 11)
 }
 
-func (e *expression) LessThan(other interface{}) BooleanExpression {
+func (e expression) LessThan(other interface{}) BooleanExpression {
 	return e.binaryOperation("<", other, 11)
 }
 
-func (e *expression) LessThanOrEquals(other interface{}) BooleanExpression {
+func (e expression) LessThanOrEquals(other interface{}) BooleanExpression {
 	return e.binaryOperation("<=", other, 11)
 }
 
-func (e *expression) GreaterThan(other interface{}) BooleanExpression {
+func (e expression) GreaterThan(other interface{}) BooleanExpression {
 	return e.binaryOperation(">", other, 11)
 }
 
-func (e *expression) GreaterThanOrEquals(other interface{}) BooleanExpression {
+func (e expression) GreaterThanOrEquals(other interface{}) BooleanExpression {
 	return e.binaryOperation(">=", other, 11)
 }
 
-func (e *expression) And(other interface{}) BooleanExpression {
+func (e expression) And(other interface{}) BooleanExpression {
 	return e.binaryOperation("AND", other, 14)
 }
 
-func (e *expression) Or(other interface{}) BooleanExpression {
+func (e expression) Or(other interface{}) BooleanExpression {
 	return e.binaryOperation("OR", other, 16)
 }
 
-func (e *expression) Add(other interface{}) NumberExpression {
+func (e expression) Add(other interface{}) NumberExpression {
 	return e.binaryOperation("+", other, 7)
 }
 
-func (e *expression) Sub(other interface{}) NumberExpression {
+func (e expression) Sub(other interface{}) NumberExpression {
 	return e.binaryOperation("-", other, 7)
 }
 
-func (e *expression) Mul(other interface{}) NumberExpression {
+func (e expression) Mul(other interface{}) NumberExpression {
 	return e.binaryOperation("*", other, 6)
 }
 
-func (e *expression) Div(other interface{}) NumberExpression {
+func (e expression) Div(other interface{}) NumberExpression {
 	return e.binaryOperation("/", other, 6)
 }
 
-func (e *expression) IntDiv(other interface{}) NumberExpression {
+func (e expression) IntDiv(other interface{}) NumberExpression {
 	return e.binaryOperation("DIV", other, 6)
 }
 
-func (e *expression) Mod(other interface{}) NumberExpression {
+func (e expression) Mod(other interface{}) NumberExpression {
 	return e.binaryOperation("%", other, 6)
 }
 
-func (e *expression) Sum() NumberExpression {
-	return e.function("SUM")
+func (e expression) Sum() NumberExpression {
+	return function("SUM", e)
 }
 
-func (e *expression) binaryOperation(operator string, value interface{}, priority int) *expression {
-	left := e.GetSQL()
-	leftLevel := e.priority
-	right, rightLevel := getSQLFromWhatever(value)
-	if leftLevel > priority {
-		left = "(" + left + ")"
-	}
-	if rightLevel >= priority {
-		right = "(" + right + ")"
-	}
-	return &expression{
-		sql:      left + " " + operator + " " + right,
-		priority: priority,
-	}
+func (e expression) binaryOperation(operator string, value interface{}, priority int) expression {
+	return expression{builder: func(scope scope) (string, error) {
+		leftSql, err := e.GetSQL(scope)
+		if err != nil {
+			return "", err
+		}
+		leftPriority := e.priority
+		rightSql, rightPriority, err := getSQLFromWhatever(scope, value)
+		if err != nil {
+			return "", err
+		}
+		if leftPriority > priority {
+			leftSql = "(" + leftSql + ")"
+		}
+		if rightPriority >= priority {
+			rightSql = "(" + rightSql + ")"
+		}
+		return leftSql + " " + operator + " " + rightSql, err
+	}, priority: priority}
 }
 
-func (e *expression) function(name string) *expression {
-	return &expression{sql: name + "(" + e.GetSQL() + ")", priority: 0}
+func (e expression) prefixSuffixExpression(prefix string, expr Expression, suffix string, priority int) *expression {
+	return &expression{builder: func(scope scope) (string, error) {
+		exprSql, err := expr.GetSQL(scope)
+		if err != nil {
+			return "", err
+		}
+		return prefix + exprSql + suffix, nil
+	}, priority: priority}
 }
 
-func (e *expression) IsNull() BooleanExpression {
-	return &expression{sql: e.GetSQL() + " IS NULL", priority: 11}
+func (e expression) IsNull() BooleanExpression {
+	return e.prefixSuffixExpression("", e, " IS NULL", 11)
 }
 
-func (e *expression) Not() BooleanExpression {
-	return &expression{sql: "NOT " + e.GetSQL(), priority: 13}
+func (e expression) Not() BooleanExpression {
+	return e.prefixSuffixExpression("NOT ", e, "", 13)
 }
 
-func (e *expression) IsNotNull() BooleanExpression {
-	return &expression{sql: e.GetSQL() + " IS NOT NULL", priority: 11}
+func (e expression) IsNotNull() BooleanExpression {
+	return e.prefixSuffixExpression("", e, " IS NOT NULL", 11)
 }
 
-func (e *expression) In(values ...interface{}) BooleanExpression {
+func (e expression) In(values ...interface{}) BooleanExpression {
 	if len(values) == 1 {
 		firstValue := values[0]
 		valueOfFirstValue := reflect.ValueOf(firstValue)
@@ -244,35 +289,44 @@ func (e *expression) In(values ...interface{}) BooleanExpression {
 		}
 	}
 	if len(values) == 0 {
-		return &expression{sql: "FALSE", priority: 0}
+		return staticExpression("0", 0)
 	}
-
-	sql := e.GetSQL() + " IN ("
-	for i, value := range values {
-		if i > 0 {
-			sql += ", "
+	return expression{builder: func(scope scope) (string, error) {
+		exprSql, err := e.GetSQL(scope)
+		if err != nil {
+			return "", err
 		}
-		valueSql, _ := getSQLFromWhatever(value)
-		sql += valueSql
-	}
-	sql += ")"
-	return &expression{sql: sql, priority: 11}
+		valuesSql, err := commaValues(scope, values)
+		if err != nil {
+			return "", err
+		}
+		return exprSql + " IN (" + valuesSql + ")", nil
+	}, priority: 11}
 }
 
-func (e *expression) Between(min interface{}, max interface{}) BooleanExpression {
-	minSql, _ := getSQLFromWhatever(min)
-	maxSql, _ := getSQLFromWhatever(max)
-	sql := e.GetSQL() + " BETWEEN " + minSql + " AND " + maxSql
-	return &expression{sql: sql, priority: 12}
+func (e expression) Between(min interface{}, max interface{}) BooleanExpression {
+	return expression{builder: func(scope scope) (string, error) {
+		exprSql, err := e.GetSQL(scope)
+		if err != nil {
+			return "", err
+		}
+		minSql, _, err := getSQLFromWhatever(scope, min)
+		if err != nil {
+			return "", err
+		}
+		maxSql, _, err := getSQLFromWhatever(scope, max)
+		if err != nil {
+			return "", err
+		}
+		return exprSql + " BETWEEN " + minSql + " AND " + maxSql, nil
+	}, priority: 12}
+
 }
 
-func (e *expression) getOperatorPriority() int {
+func (e expression) getOperatorPriority() int {
 	return e.priority
 }
 
-func (e *expression) Desc() OrderBy {
+func (e expression) Desc() OrderBy {
 	return &orderBy{by: e, desc: true}
-}
-
-func NewExpression(sql string, priority int) {
 }

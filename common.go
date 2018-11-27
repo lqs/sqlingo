@@ -12,7 +12,7 @@ type Model interface {
 }
 
 type Assignment interface {
-	GetSQL() string
+	GetSQL(scope scope) (string, error)
 }
 
 type assignment struct {
@@ -21,18 +21,25 @@ type assignment struct {
 	value interface{}
 }
 
-func (a *assignment) GetSQL() string {
-	value, _ := getSQLFromWhatever(a.value)
-	return a.field.GetSQL() + " = " + value
+func (a *assignment) GetSQL(scope scope) (string, error) {
+	value, _, err := getSQLFromWhatever(scope, a.value)
+	if err != nil {
+		return "", err
+	}
+	fieldSql, err := a.field.GetSQL(scope)
+	if err != nil {
+		return "", err
+	}
+	return fieldSql + " = " + value, nil
 }
 
 func Raw(sql string) UnknownExpression {
-	return &expression{sql: sql, priority: 99}
+	return staticExpression(sql, 99)
 }
 
 func And(expressions ...BooleanExpression) (result BooleanExpression) {
 	if len(expressions) == 0 {
-		result = &expression{sql: "TRUE"}
+		result = staticExpression("1", 0)
 		return
 	}
 	for i, condition := range expressions {
@@ -47,7 +54,7 @@ func And(expressions ...BooleanExpression) (result BooleanExpression) {
 
 func Or(expressions ...BooleanExpression) (result BooleanExpression) {
 	if len(expressions) == 0 {
-		result = &expression{sql: "FALSE"}
+		result = staticExpression("0", 0)
 		return
 	}
 	for i, condition := range expressions {
@@ -60,68 +67,97 @@ func Or(expressions ...BooleanExpression) (result BooleanExpression) {
 	return
 }
 
+func function(name string, args ...interface{}) expression {
+	return expression{builder: func(scope scope) (string, error) {
+		valuesSql, err := commaValues(scope, args)
+		if err != nil {
+			return "", err
+		}
+		return name + "(" + valuesSql + ")", nil
+	}}
+}
+
 func Function(name string, args ...interface{}) Expression {
-	return &expression{sql: name + "(" + commaValues(args) + ")"}
+	return function(name, args...)
 }
 
 func If(predicate Expression, trueValue Expression, falseValue Expression) (result Expression) {
 	return Function("IF", predicate, trueValue, falseValue)
 }
 
-func commaFields(fields []Field) string {
+func commaFields(scope scope, fields []Field) (string, error) {
 	sql := ""
 	for i, item := range fields {
 		if i > 0 {
 			sql += ", "
 		}
-		sql += item.GetSQL()
+		itemSql, err := item.GetSQL(scope)
+		if err != nil {
+			return "", err
+		}
+		sql += itemSql
 	}
-	return sql
+	return sql, nil
 }
 
-func commaExpressions(expressions []Expression) string {
+func commaExpressions(scope scope, expressions []Expression) (string, error) {
 	sql := ""
 	for i, item := range expressions {
 		if i > 0 {
 			sql += ", "
 		}
-		sql += item.GetSQL()
+		itemSql, err := item.GetSQL(scope)
+		if err != nil {
+			return "", err
+		}
+		sql += itemSql
 	}
-	return sql
+	return sql, nil
 }
 
-func commaValues(values []interface{}) string {
+func commaValues(scope scope, values []interface{}) (string, error) {
 	sql := ""
 	for i, item := range values {
 		if i > 0 {
 			sql += ", "
 		}
-		value, _ := getSQLFromWhatever(item)
-		sql += value
+		itemSql, _, err := getSQLFromWhatever(scope, item)
+		if err != nil {
+			return "", err
+		}
+		sql += itemSql
 	}
-	return sql
+	return sql, nil
 }
 
-func commaAssignments(assignments []assignment) string {
+func commaAssignments(scope scope, assignments []assignment) (string, error) {
 	sql := ""
 	for i, item := range assignments {
 		if i > 0 {
 			sql += ", "
 		}
-		sql += item.GetSQL()
+		itemSql, err := item.GetSQL(scope)
+		if err != nil {
+			return "", err
+		}
+		sql += itemSql
 	}
-	return sql
+	return sql, nil
 }
 
-func commaOrderBys(orderBys []OrderBy) string {
+func commaOrderBys(scope scope, orderBys []OrderBy) (string, error) {
 	sql := ""
 	for i, item := range orderBys {
 		if i > 0 {
 			sql += ", "
 		}
-		sql += item.GetSQL()
+		itemSql, err := item.GetSQL(scope)
+		if err != nil {
+			return "", err
+		}
+		sql += itemSql
 	}
-	return sql
+	return sql, nil
 }
 
 func getSQLForName(name string) string {
@@ -134,7 +170,7 @@ func getCallerInfo(db Database) string {
 	switch db.(type) {
 	case *database:
 		if db.(*database).tx != nil {
-			txInfo = " tx"
+			txInfo = " (tx)"
 		}
 	}
 	for i := 0; true; i++ {
@@ -142,14 +178,12 @@ func getCallerInfo(db Database) string {
 		if !ok {
 			break
 		}
+		if strings.Contains(file, "/sqlingo@v") {
+			continue
+		}
 		segs := strings.Split(file, "/")
 		name := segs[len(segs)-1]
-		switch name {
-		case "common.go", "select.go", "insert.go", "update.go", "delete.go":
-			continue
-		default:
-			return fmt.Sprintf("/* %s:%d%s */ ", name, line, txInfo)
-		}
+		return fmt.Sprintf("/* %s:%d%s */ ", name, line, txInfo)
 	}
 	return ""
 }

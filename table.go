@@ -2,7 +2,7 @@ package sqlingo
 
 type Table interface {
 	GetName() string
-	GetSQL() string
+	GetSQL(scope scope) string
 	GetFields() []Field
 }
 
@@ -16,7 +16,7 @@ func (t *table) GetName() string {
 	return t.name
 }
 
-func (t *table) GetSQL() string {
+func (t *table) GetSQL(scope scope) string {
 	return t.sql
 }
 

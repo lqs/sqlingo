@@ -1,7 +1,7 @@
 package sqlingo
 
 type OrderBy interface {
-	GetSQL() string
+	GetSQL(scope scope) (string, error)
 }
 
 type orderBy struct {
@@ -9,10 +9,13 @@ type orderBy struct {
 	desc bool
 }
 
-func (o *orderBy) GetSQL() string {
-	sql := o.by.GetSQL()
+func (o *orderBy) GetSQL(scope scope) (string, error) {
+	sql, err := o.by.GetSQL(scope)
+	if err != nil {
+		return "", err
+	}
 	if o.desc {
 		sql += " DESC"
 	}
-	return sql
+	return sql, nil
 }

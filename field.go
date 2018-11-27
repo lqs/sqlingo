@@ -16,12 +16,14 @@ type StringField interface {
 	StringExpression
 }
 
-func newFieldExpression(tableName string, fieldName string) *expression {
-	sql := getSQLForName(fieldName)
-	if tableName != "" {
-		sql = getSQLForName(tableName) + "." + sql
-	}
-	return &expression{sql: sql, priority: 0}
+func newFieldExpression(tableName string, fieldName string) expression {
+	return expression{builder: func(scope scope) (string, error) {
+		sql := getSQLForName(fieldName)
+		if len(scope.Tables) != 1 || scope.Tables[0].GetName() != tableName {
+			sql = getSQLForName(tableName) + "." + sql
+		}
+		return sql, nil
+	}}
 }
 
 func NewNumberField(tableName string, fieldName string) NumberField {

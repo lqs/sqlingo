@@ -6,8 +6,7 @@ import (
 )
 
 type insertStatus struct {
-	database                        Database
-	table                           *Table
+	scope                           scope
 	fields                          []Field
 	values                          []interface{}
 	models                          []Model
@@ -52,7 +51,7 @@ type InsertWithOnDuplicateKeyUpdate interface {
 }
 
 func (d *database) InsertInto(table Table) InsertWithTable {
-	return &insertStatus{database: d, table: &table}
+	return &insertStatus{scope: scope{Database: d, Tables: []Table{table}}}
 }
 
 func (s *insertStatus) Fields(fields ...Field) InsertWithValues {
@@ -97,7 +96,7 @@ func (s *insertStatus) Models(models ...interface{}) InsertWithModels {
 
 	insert := s.copy()
 	for _, model := range models {
-		insert.addModel(&model)
+		insert.addModel(model)
 	}
 	return insert
 }
@@ -129,9 +128,23 @@ func (s *insertStatus) GetSQL() (string, error) {
 		values = s.values
 	}
 
-	sqlString := getCallerInfo(s.database) + "INSERT INTO " + (*s.table).GetSQL() + " (" + commaFields(fields) + ") VALUES " + commaValues(values)
+	tableSql := s.scope.Tables[0].GetSQL(s.scope)
+	fieldsSql, err := commaFields(s.scope, fields)
+	if err != nil {
+		return "", err
+	}
+	valuesSql, err := commaValues(s.scope, values)
+	if err != nil {
+		return "", err
+	}
+
+	sqlString := "INSERT INTO " + tableSql + " (" + fieldsSql + ") VALUES " + valuesSql
 	if len(s.onDuplicateKeyUpdateAssignments) > 0 {
-		sqlString += " ON DUPLICATE KEY UPDATE " + commaAssignments(s.onDuplicateKeyUpdateAssignments)
+		assignmentsSql, err := commaAssignments(s.scope, s.onDuplicateKeyUpdateAssignments)
+		if err != nil {
+			return "", err
+		}
+		sqlString += " ON DUPLICATE KEY UPDATE " + assignmentsSql
 	}
 
 	return sqlString, nil
@@ -143,5 +156,5 @@ func (s *insertStatus) Execute() (result sql.Result, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return s.database.Execute(sqlString)
+	return s.scope.Database.Execute(sqlString)
 }

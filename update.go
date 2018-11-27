@@ -5,10 +5,9 @@ import (
 )
 
 type updateStatus struct {
-	database    Database
-	table       *Table
+	scope       scope
 	assignments []assignment
-	where       *BooleanExpression
+	where       BooleanExpression
 }
 
 func (s *updateStatus) copy() *updateStatus {
@@ -18,7 +17,7 @@ func (s *updateStatus) copy() *updateStatus {
 }
 
 func (d *database) Update(table Table) UpdateWithTable {
-	return &updateStatus{database: d, table: &table}
+	return &updateStatus{scope: scope{Database: d, Tables: []Table{table}}}
 }
 
 type UpdateWithTable interface {
@@ -58,15 +57,24 @@ func (s *updateStatus) SetMap(values map[Field]interface{}) UpdateWithSet {
 
 func (s *updateStatus) Where(conditions ...BooleanExpression) UpdateWithWhere {
 	update := s.copy()
-	condition := And(conditions...)
-	update.where = &condition
+	update.where = And(conditions...)
 	return update
 }
 
 func (s *updateStatus) GetSQL() (string, error) {
-	sqlString := getCallerInfo(s.database) + "UPDATE " + (*s.table).GetSQL() +
-		" SET " + commaAssignments(s.assignments) +
-		" WHERE " + (*s.where).GetSQL()
+	sqlString := "UPDATE " + s.scope.Tables[0].GetSQL(s.scope)
+
+	assignmentsSql, err := commaAssignments(s.scope, s.assignments)
+	if err != nil {
+		return "", err
+	}
+	sqlString += " SET " + assignmentsSql
+
+	whereSql, err := s.where.GetSQL(s.scope)
+	if err != nil {
+		return "", err
+	}
+	sqlString += " WHERE " + whereSql
 
 	return sqlString, nil
 }
@@ -76,5 +84,5 @@ func (s *updateStatus) Execute() (sql.Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	return s.database.Execute(sqlString)
+	return s.scope.Database.Execute(sqlString)
 }

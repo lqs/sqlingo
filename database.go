@@ -66,6 +66,7 @@ func (d *database) getTxOrDB() txOrDB {
 }
 
 func (d *database) Query(sql string) (Cursor, error) {
+	sql = getCallerInfo(d) + sql
 	startTime := time.Now().UnixNano()
 	rows, err := d.getTxOrDB().Query(sql)
 	endTime := time.Now().UnixNano()
@@ -77,6 +78,7 @@ func (d *database) Query(sql string) (Cursor, error) {
 }
 
 func (d *database) Execute(sql string) (sql.Result, error) {
+	sql = getCallerInfo(d) + sql
 	startTime := time.Now().UnixNano()
 	result, err := d.getTxOrDB().Exec(sql)
 	endTime := time.Now().UnixNano()
