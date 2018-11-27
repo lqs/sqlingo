@@ -28,7 +28,7 @@ func convertCase(s string) (result string) {
 }
 
 func getType(s string, nullable bool) (goType string, fieldClass string, err error) {
-	r, _ := regexp.Compile("([a-z]+)(\\(([0-9]+)\\))?")
+	r, _ := regexp.Compile("([a-z]+)(\\(([0-9]+)\\))?( ([a-z]+))?")
 
 	submatches := r.FindStringSubmatch(s)
 	fieldType := submatches[1]
@@ -39,6 +39,7 @@ func getType(s string, nullable bool) (goType string, fieldClass string, err err
 			return
 		}
 	}
+	unsigned := submatches[5] == "unsigned"
 	switch fieldType {
 	case "tinyint":
 		goType = "int8"
@@ -72,6 +73,9 @@ func getType(s string, nullable bool) (goType string, fieldClass string, err err
 	default:
 		err = fmt.Errorf("unknown field type %s", fieldType)
 		return
+	}
+	if unsigned {
+		goType = "u" + goType
 	}
 	if nullable {
 		goType = "*" + goType
@@ -204,8 +208,6 @@ func generateTable(db *sql.DB, tableName string) (string, error) {
 		fields += "t." + goName + ", "
 		values += "m." + goName + ", "
 	}
-
-	//println(tableLines, recordLines, objectLines, classLines)
 
 	code := ""
 	code += "type " + tableStructName + " struct {\n\tTable\n"
