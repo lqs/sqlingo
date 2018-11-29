@@ -50,6 +50,8 @@ type NumberExpression interface {
 	Mod(other interface{}) NumberExpression
 
 	Sum() NumberExpression
+	Min() UnknownExpression
+	Max() UnknownExpression
 }
 
 type StringExpression interface {
@@ -69,6 +71,8 @@ type UnknownExpression interface {
 	Mod(other interface{}) NumberExpression
 
 	Sum() NumberExpression
+	Min() UnknownExpression
+	Max() UnknownExpression
 }
 
 type expression struct {
@@ -234,6 +238,14 @@ func (e expression) Mod(other interface{}) NumberExpression {
 
 func (e expression) Sum() NumberExpression {
 	return function("SUM", e)
+}
+
+func (e expression) Min() UnknownExpression {
+	return function("MIN", e)
+}
+
+func (e expression) Max() UnknownExpression {
+	return function("MAX", e)
 }
 
 func (e expression) binaryOperation(operator string, value interface{}, priority int) expression {
