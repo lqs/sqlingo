@@ -291,6 +291,15 @@ func (e expression) IsNotNull() BooleanExpression {
 	return e.prefixSuffixExpression("", " IS NOT NULL", 11)
 }
 
+func isSelect(s interface{}) bool {
+	switch s.(type) {
+	case Select:
+		return true
+	default:
+		return false
+	}
+}
+
 func (e expression) In(values ...interface{}) BooleanExpression {
 	if len(values) == 1 {
 		firstValue := values[0]
@@ -312,9 +321,17 @@ func (e expression) In(values ...interface{}) BooleanExpression {
 		if err != nil {
 			return "", err
 		}
-		valuesSql, err := commaValues(scope, values)
-		if err != nil {
-			return "", err
+		var valuesSql string
+		if len(values) == 1 && isSelect(values[0]) {
+			valuesSql, err = values[0].(Select).GetSQL()
+			if err != nil {
+				return "", err
+			}
+		} else {
+			valuesSql, err = commaValues(scope, values)
+			if err != nil {
+				return "", err
+			}
 		}
 		return exprSql + " IN (" + valuesSql + ")", nil
 	}, priority: 11}

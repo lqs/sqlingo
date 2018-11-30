@@ -65,6 +65,7 @@ type SelectWithOffset interface {
 
 type selectStatus struct {
 	scope    scope
+	distinct bool
 	fields   []Field
 	where    BooleanExpression
 	orderBys []OrderBy
@@ -116,6 +117,12 @@ func (d *database) SelectFrom(tables ...Table) SelectWithTables {
 	return &select_
 }
 
+func (d *database) SelectDistinct(fields ...interface{}) SelectWithFields {
+	select_ := d.Select(fields...)
+	select_.(*selectStatus).distinct = true
+	return select_
+}
+
 func (s *selectStatus) Where(conditions ...BooleanExpression) SelectWithWhere {
 	select_ := s.copy()
 	select_.where = And(conditions...)
@@ -153,11 +160,39 @@ func (s *selectStatus) Offset(offset int) SelectWithOffset {
 }
 
 func (s *selectStatus) Count() (count int, err error) {
-	select_ := s.copy()
-	select_.fields = []Field{staticExpression("COUNT(1)", 0)}
+	if len(s.groupBys) == 0 {
+		if s.distinct {
+			select_ := s.copy()
+			var fields []interface{}
+			for _, field := range select_.fields {
+				fields = append(fields, field)
+			}
+			select_.distinct = false
+			select_.fields = []Field{expression{builder: func(scope scope) (string, error) {
+				valuesSql, err := commaValues(scope, fields)
+				if err != nil {
+					return "", err
+				}
+				return "COUNT(DISTINCT " + valuesSql + ")", nil
+			}}}
+			_, err = select_.FetchFirst(&count)
+		} else {
+			select_ := s.copy()
+			select_.fields = []Field{staticExpression("COUNT(1)", 0)}
+			_, err = select_.FetchFirst(&count)
+		}
+	} else {
+		_, err = s.scope.Database.Select(Function("COUNT", 1)).From(s.asDerivedTable("t")).FetchFirst(&count)
+	}
 
-	_, err = select_.FetchFirst(&count)
 	return
+}
+
+func (s *selectStatus) asDerivedTable(name string) Table {
+	return &derivedTable{
+		name:    name,
+		select_: *s,
+	}
 }
 
 func (s *selectStatus) Exists() (exists bool, err error) {
@@ -166,12 +201,16 @@ func (s *selectStatus) Exists() (exists bool, err error) {
 }
 
 func (s *selectStatus) GetSQL() (string, error) {
-	selectSql, err := commaFields(s.scope, s.fields)
+	sql := "SELECT "
+	if s.distinct {
+		sql += "DISTINCT "
+	}
+
+	fieldsSql, err := commaFields(s.scope, s.fields)
 	if err != nil {
 		return "", err
 	}
-
-	sql := "SELECT " + selectSql
+	sql += fieldsSql
 
 	if len(s.scope.Tables) > 0 {
 		var values []interface{}
