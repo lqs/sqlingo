@@ -10,19 +10,12 @@ type updateStatus struct {
 	where       BooleanExpression
 }
 
-func (s *updateStatus) copy() *updateStatus {
-	update := *s
-	update.assignments = append([]assignment{}, s.assignments...)
-	return &update
-}
-
 func (d *database) Update(table Table) UpdateWithTable {
-	return &updateStatus{scope: scope{Database: d, Tables: []Table{table}}}
+	return updateStatus{scope: scope{Database: d, Tables: []Table{table}}}
 }
 
 type UpdateWithTable interface {
 	Set(field Field, value interface{}) UpdateWithSet
-	SetMap(map[Field]interface{}) UpdateWithSet
 }
 
 type UpdateWithSet interface {
@@ -35,33 +28,21 @@ type UpdateWithWhere interface {
 	Execute() (sql.Result, error)
 }
 
-func (s *updateStatus) Set(field Field, value interface{}) UpdateWithSet {
-	update := s.copy()
-	update.assignments = append(update.assignments, assignment{
+func (s updateStatus) Set(field Field, value interface{}) UpdateWithSet {
+	s.assignments = append([]assignment{}, s.assignments...)
+	s.assignments = append(s.assignments, assignment{
 		field: field,
 		value: value,
 	})
-	return update
+	return s
 }
 
-func (s *updateStatus) SetMap(values map[Field]interface{}) UpdateWithSet {
-	update := s.copy()
-	for field, value := range values {
-		update.assignments = append(update.assignments, assignment{
-			field: field,
-			value: value,
-		})
-	}
-	return update
+func (s updateStatus) Where(conditions ...BooleanExpression) UpdateWithWhere {
+	s.where = And(conditions...)
+	return s
 }
 
-func (s *updateStatus) Where(conditions ...BooleanExpression) UpdateWithWhere {
-	update := s.copy()
-	update.where = And(conditions...)
-	return update
-}
-
-func (s *updateStatus) GetSQL() (string, error) {
+func (s updateStatus) GetSQL() (string, error) {
 	sqlString := "UPDATE " + s.scope.Tables[0].GetSQL(s.scope)
 
 	assignmentsSql, err := commaAssignments(s.scope, s.assignments)
@@ -79,7 +60,7 @@ func (s *updateStatus) GetSQL() (string, error) {
 	return sqlString, nil
 }
 
-func (s *updateStatus) Execute() (sql.Result, error) {
+func (s updateStatus) Execute() (sql.Result, error) {
 	sqlString, err := s.GetSQL()
 	if err != nil {
 		return nil, err

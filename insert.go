@@ -13,14 +13,6 @@ type insertStatus struct {
 	onDuplicateKeyUpdateAssignments []assignment
 }
 
-func (s *insertStatus) copy() *insertStatus {
-	insert := *s
-	s.fields = append([]Field{}, s.fields...)
-	s.values = append([]interface{}{}, s.values...)
-	s.onDuplicateKeyUpdateAssignments = append([]assignment{}, s.onDuplicateKeyUpdateAssignments...)
-	return &insert
-}
-
 type InsertWithTable interface {
 	Fields(fields ...Field) InsertWithValues
 	Values(values ...interface{}) InsertWithValues
@@ -51,19 +43,18 @@ type InsertWithOnDuplicateKeyUpdate interface {
 }
 
 func (d *database) InsertInto(table Table) InsertWithTable {
-	return &insertStatus{scope: scope{Database: d, Tables: []Table{table}}}
+	return insertStatus{scope: scope{Database: d, Tables: []Table{table}}}
 }
 
-func (s *insertStatus) Fields(fields ...Field) InsertWithValues {
-	insert := s.copy()
-	insert.fields = fields
-	return insert
+func (s insertStatus) Fields(fields ...Field) InsertWithValues {
+	s.fields = fields
+	return s
 }
 
-func (s *insertStatus) Values(values ...interface{}) InsertWithValues {
-	insert := s.copy()
-	insert.values = append(insert.values, values)
-	return insert
+func (s insertStatus) Values(values ...interface{}) InsertWithValues {
+	s.values = append([]interface{}{}, s.values...)
+	s.values = append(s.values, values...)
+	return s
 }
 
 func (s *insertStatus) addModel(model interface{}) {
@@ -89,33 +80,31 @@ func (s *insertStatus) addModel(model interface{}) {
 	}
 }
 
-func (s *insertStatus) Models(models ...interface{}) InsertWithModels {
+func (s insertStatus) Models(models ...interface{}) InsertWithModels {
 	if len(models) == 0 {
 		return s
 	}
 
-	insert := s.copy()
 	for _, model := range models {
-		insert.addModel(model)
+		s.addModel(model)
 	}
-	return insert
+	return s
 }
 
-func (s *insertStatus) OnDuplicateKeyUpdate() InsertWithOnDuplicateKeyUpdateBegin {
-	insert := s.copy()
-	return insert
+func (s insertStatus) OnDuplicateKeyUpdate() InsertWithOnDuplicateKeyUpdateBegin {
+	return s
 }
 
-func (s *insertStatus) Set(field Field, value interface{}) InsertWithOnDuplicateKeyUpdate {
-	insert := s.copy()
-	insert.onDuplicateKeyUpdateAssignments = append(insert.onDuplicateKeyUpdateAssignments, assignment{
+func (s insertStatus) Set(field Field, value interface{}) InsertWithOnDuplicateKeyUpdate {
+	s.onDuplicateKeyUpdateAssignments = append([]assignment{}, s.onDuplicateKeyUpdateAssignments...)
+	s.onDuplicateKeyUpdateAssignments = append(s.onDuplicateKeyUpdateAssignments, assignment{
 		field: field,
 		value: value,
 	})
-	return insert
+	return s
 }
 
-func (s *insertStatus) GetSQL() (string, error) {
+func (s insertStatus) GetSQL() (string, error) {
 	var fields []Field
 	var values []interface{}
 	if len(s.models) > 0 {
@@ -151,7 +140,7 @@ func (s *insertStatus) GetSQL() (string, error) {
 
 }
 
-func (s *insertStatus) Execute() (result sql.Result, err error) {
+func (s insertStatus) Execute() (result sql.Result, err error) {
 	sqlString, err := s.GetSQL()
 	if err != nil {
 		return nil, err

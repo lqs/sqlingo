@@ -75,13 +75,7 @@ type selectStatus struct {
 	offset   *int
 }
 
-func (s *selectStatus) copy() *selectStatus {
-	select_ := *s
-	return &select_
-}
-
-func (d *database) Select(fields ...interface{}) SelectWithFields {
-	select_ := &selectStatus{scope: scope{Database: d}}
+func getFields(fields []interface{}) (result []Field) {
 	for _, field := range fields {
 		fieldCopy := field
 		fieldExpression := expression{builder: func(scope scope) (string, error) {
@@ -91,95 +85,87 @@ func (d *database) Select(fields ...interface{}) SelectWithFields {
 			}
 			return sql, nil
 		}}
-		select_.fields = append(select_.fields, fieldExpression)
+		result = append(result, fieldExpression)
 	}
-	return select_
+	return
 }
 
-func (s *selectStatus) From(tables ...Table) SelectWithTables {
-	select_ := s.copy()
+func (d *database) Select(fields ...interface{}) SelectWithFields {
+	return selectStatus{scope: scope{Database: d}, fields: getFields(fields)}
+}
+
+func (s selectStatus) From(tables ...Table) SelectWithTables {
 	for _, table := range tables {
-		select_.scope.Tables = append(select_.scope.Tables, table)
+		s.scope.Tables = append(s.scope.Tables, table)
 	}
-	return select_
+	return s
 }
 
 func (d *database) SelectFrom(tables ...Table) SelectWithTables {
-	select_ := selectStatus{scope: scope{Database: d}}
+	s := selectStatus{scope: scope{Database: d}}
 	for _, table := range tables {
-		select_.scope.Tables = append(select_.scope.Tables, table)
+		s.scope.Tables = append(s.scope.Tables, table)
 		fields := table.GetFields()
 		for _, field := range fields {
-			select_.fields = append(select_.fields, field)
+			s.fields = append(s.fields, field)
 		}
 	}
-
-	return &select_
+	return s
 }
 
 func (d *database) SelectDistinct(fields ...interface{}) SelectWithFields {
-	select_ := d.Select(fields...)
-	select_.(*selectStatus).distinct = true
-	return select_
+	return selectStatus{scope: scope{Database: d}, fields: getFields(fields), distinct: true}
 }
 
-func (s *selectStatus) Where(conditions ...BooleanExpression) SelectWithWhere {
-	select_ := s.copy()
-	select_.where = And(conditions...)
-	return select_
+func (s selectStatus) Where(conditions ...BooleanExpression) SelectWithWhere {
+	s.where = And(conditions...)
+	return s
 }
 
-func (s *selectStatus) GroupBy(expressions ...Expression) SelectWithGroupBy {
-	select_ := s.copy()
-	select_.groupBys = expressions
-	return select_
+func (s selectStatus) GroupBy(expressions ...Expression) SelectWithGroupBy {
+	s.groupBys = append([]Expression{}, expressions...)
+	return s
 }
 
-func (s *selectStatus) Having(conditions ...BooleanExpression) SelectWithGroupByHaving {
-	select_ := s.copy()
-	select_.having = And(conditions...)
-	return select_
+func (s selectStatus) Having(conditions ...BooleanExpression) SelectWithGroupByHaving {
+	s.having = And(conditions...)
+	return s
 }
 
-func (s *selectStatus) OrderBy(orderBys ...OrderBy) SelectWithOrder {
-	select_ := s.copy()
-	select_.orderBys = append(select_.orderBys, orderBys...)
-	return select_
+func (s selectStatus) OrderBy(orderBys ...OrderBy) SelectWithOrder {
+	s.orderBys = append([]OrderBy{}, orderBys...)
+	return s
 }
 
-func (s *selectStatus) Limit(limit int) SelectWithLimit {
-	select_ := s.copy()
-	select_.limit = &limit
-	return select_
+func (s selectStatus) Limit(limit int) SelectWithLimit {
+	s.limit = &limit
+	return s
 }
 
-func (s *selectStatus) Offset(offset int) SelectWithOffset {
-	select_ := s.copy()
-	select_.limit = &offset
-	return select_
+func (s selectStatus) Offset(offset int) SelectWithOffset {
+	s.limit = &offset
+	return s
 }
 
-func (s *selectStatus) Count() (count int, err error) {
+func (s selectStatus) Count() (count int, err error) {
 	if len(s.groupBys) == 0 {
 		if s.distinct {
-			select_ := s.copy()
 			var fields []interface{}
-			for _, field := range select_.fields {
+			for _, field := range s.fields {
 				fields = append(fields, field)
 			}
-			select_.distinct = false
-			select_.fields = []Field{expression{builder: func(scope scope) (string, error) {
+			s.distinct = false
+			s.fields = []Field{expression{builder: func(scope scope) (string, error) {
 				valuesSql, err := commaValues(scope, fields)
 				if err != nil {
 					return "", err
 				}
 				return "COUNT(DISTINCT " + valuesSql + ")", nil
 			}}}
-			_, err = select_.FetchFirst(&count)
+			_, err = s.FetchFirst(&count)
 		} else {
-			select_ := s.copy()
-			select_.fields = []Field{staticExpression("COUNT(1)", 0)}
-			_, err = select_.FetchFirst(&count)
+			s.fields = []Field{staticExpression("COUNT(1)", 0)}
+			_, err = s.FetchFirst(&count)
 		}
 	} else {
 		_, err = s.scope.Database.Select(Function("COUNT", 1)).From(s.asDerivedTable("t")).FetchFirst(&count)
@@ -188,19 +174,19 @@ func (s *selectStatus) Count() (count int, err error) {
 	return
 }
 
-func (s *selectStatus) asDerivedTable(name string) Table {
-	return &derivedTable{
+func (s selectStatus) asDerivedTable(name string) Table {
+	return derivedTable{
 		name:    name,
-		select_: *s,
+		select_: s,
 	}
 }
 
-func (s *selectStatus) Exists() (exists bool, err error) {
+func (s selectStatus) Exists() (exists bool, err error) {
 	_, err = s.scope.Database.Select(command(Raw("EXISTS"), s)).FetchFirst(&exists)
 	return
 }
 
-func (s *selectStatus) GetSQL() (string, error) {
+func (s selectStatus) GetSQL() (string, error) {
 	sql := "SELECT "
 	if s.distinct {
 		sql += "DISTINCT "
@@ -267,7 +253,7 @@ func (s *selectStatus) GetSQL() (string, error) {
 	return sql, nil
 }
 
-func (s *selectStatus) FetchCursor() (Cursor, error) {
+func (s selectStatus) FetchCursor() (Cursor, error) {
 	sqlString, err := s.GetSQL()
 	if err != nil {
 		return nil, err
@@ -280,7 +266,7 @@ func (s *selectStatus) FetchCursor() (Cursor, error) {
 	return cursor, nil
 }
 
-func (s *selectStatus) FetchFirst(dest ...interface{}) (ok bool, err error) {
+func (s selectStatus) FetchFirst(dest ...interface{}) (ok bool, err error) {
 	cursor, err := s.FetchCursor()
 	if err != nil {
 		return
@@ -299,7 +285,7 @@ func (s *selectStatus) FetchFirst(dest ...interface{}) (ok bool, err error) {
 	return
 }
 
-func (s *selectStatus) FetchAll(dest interface{}) error {
+func (s selectStatus) FetchAll(dest interface{}) error {
 	if reflect.ValueOf(dest).Kind() != reflect.Ptr {
 		return errors.New("dest should be a pointer")
 	}

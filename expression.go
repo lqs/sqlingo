@@ -92,7 +92,7 @@ func staticExpression(sql string, priority int) expression {
 }
 
 func (e expression) As(name string) Alias {
-	return &expression{builder: func(scope scope) (string, error) {
+	return expression{builder: func(scope scope) (string, error) {
 		expressionSql, err := e.GetSQL(scope)
 		if err != nil {
 			return "", err
@@ -269,8 +269,8 @@ func (e expression) binaryOperation(operator string, value interface{}, priority
 	}, priority: priority}
 }
 
-func (e expression) prefixSuffixExpression(prefix string, suffix string, priority int) *expression {
-	return &expression{builder: func(scope scope) (string, error) {
+func (e expression) prefixSuffixExpression(prefix string, suffix string, priority int) expression {
+	return expression{builder: func(scope scope) (string, error) {
 		exprSql, err := e.GetSQL(scope)
 		if err != nil {
 			return "", err
@@ -302,14 +302,12 @@ func isSelect(s interface{}) bool {
 
 func (e expression) In(values ...interface{}) BooleanExpression {
 	if len(values) == 1 {
-		firstValue := values[0]
-		valueOfFirstValue := reflect.ValueOf(firstValue)
-		if valueOfFirstValue.Kind() == reflect.Slice {
-			length := valueOfFirstValue.Len()
+		value := reflect.ValueOf(values[0])
+		if value.Kind() == reflect.Slice {
+			length := value.Len()
 			values = make([]interface{}, length)
 			for i := 0; i < length; i++ {
-				value := valueOfFirstValue.Index(i)
-				values[i] = value.Interface()
+				values[i] = value.Index(i).Interface()
 			}
 		}
 	}
@@ -317,22 +315,35 @@ func (e expression) In(values ...interface{}) BooleanExpression {
 		return staticExpression("0", 0)
 	}
 	return expression{builder: func(scope scope) (string, error) {
-		exprSql, err := e.GetSQL(scope)
-		if err != nil {
-			return "", err
-		}
+
 		var valuesSql string
-		if len(values) == 1 && isSelect(values[0]) {
-			valuesSql, err = values[0].(Select).GetSQL()
-			if err != nil {
-				return "", err
+		var err error
+
+		if len(values) == 1 {
+			value := values[0]
+			if select_, ok := value.(Select); ok {
+				// IN subquery
+				valuesSql, err = select_.GetSQL()
+				if err != nil {
+					return "", err
+				}
+			} else {
+				// IN a single value
+				return e.Equals(value).GetSQL(scope)
 			}
 		} else {
+			// IN a list
 			valuesSql, err = commaValues(scope, values)
 			if err != nil {
 				return "", err
 			}
 		}
+
+		exprSql, err := e.GetSQL(scope)
+		if err != nil {
+			return "", err
+		}
+
 		return exprSql + " IN (" + valuesSql + ")", nil
 	}, priority: 11}
 }
@@ -361,5 +372,5 @@ func (e expression) getOperatorPriority() int {
 }
 
 func (e expression) Desc() OrderBy {
-	return &orderBy{by: e, desc: true}
+	return orderBy{by: e, desc: true}
 }

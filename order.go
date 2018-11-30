@@ -9,7 +9,7 @@ type orderBy struct {
 	desc bool
 }
 
-func (o *orderBy) GetSQL(scope scope) (string, error) {
+func (o orderBy) GetSQL(scope scope) (string, error) {
 	sql, err := o.by.GetSQL(scope)
 	if err != nil {
 		return "", err

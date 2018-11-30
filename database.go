@@ -75,7 +75,7 @@ func (d *database) Query(sql string) (Cursor, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &cursor{rows: rows}, nil
+	return cursor{rows: rows}, nil
 }
 
 func (d *database) Execute(sql string) (sql.Result, error) {

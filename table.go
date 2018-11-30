@@ -12,20 +12,20 @@ type table struct {
 	sql  string
 }
 
-func (t *table) GetName() string {
+func (t table) GetName() string {
 	return t.name
 }
 
-func (t *table) GetSQL(scope scope) string {
+func (t table) GetSQL(scope scope) string {
 	return t.sql
 }
 
-func (t *table) getOperatorPriority() int {
+func (t table) getOperatorPriority() int {
 	return 0
 }
 
 func NewTable(name string) Table {
-	return &table{name: name, sql: getSQLForName(name)}
+	return table{name: name, sql: getSQLForName(name)}
 }
 
 type derivedTable struct {

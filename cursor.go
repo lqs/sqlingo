@@ -16,7 +16,7 @@ type cursor struct {
 	rows *sql.Rows
 }
 
-func (c *cursor) Next() bool {
+func (c cursor) Next() bool {
 	return c.rows.Next()
 }
 
@@ -61,7 +61,7 @@ func preparePointers(val reflect.Value, scans *[]interface{}) error {
 	return nil
 }
 
-func (c *cursor) Scan(dest ...interface{}) error {
+func (c cursor) Scan(dest ...interface{}) error {
 
 	var scans []interface{}
 	for i, item := range dest {
@@ -81,6 +81,6 @@ func (c *cursor) Scan(dest ...interface{}) error {
 	return err
 }
 
-func (c *cursor) Close() error {
+func (c cursor) Close() error {
 	return c.rows.Close()
 }

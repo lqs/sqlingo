@@ -21,7 +21,7 @@ type assignment struct {
 	value interface{}
 }
 
-func (a *assignment) GetSQL(scope scope) (string, error) {
+func (a assignment) GetSQL(scope scope) (string, error) {
 	value, _, err := getSQLFromWhatever(scope, a.value)
 	if err != nil {
 		return "", err
