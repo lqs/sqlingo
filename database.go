@@ -19,7 +19,7 @@ type Database interface {
 	SelectDistinct(fields ...interface{}) SelectWithFields
 	SelectFrom(tables ...Table) SelectWithTables
 	InsertInto(table Table) InsertWithTable
-	Update(table Table) UpdateWithTable
+	Update(table Table) UpdateWithSet
 	DeleteFrom(table Table) DeleteWithTable
 }
 

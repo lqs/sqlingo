@@ -2,6 +2,7 @@ package sqlingo
 
 import (
 	"database/sql"
+	"errors"
 )
 
 type updateStatus struct {
@@ -10,12 +11,8 @@ type updateStatus struct {
 	where       BooleanExpression
 }
 
-func (d *database) Update(table Table) UpdateWithTable {
+func (d *database) Update(table Table) UpdateWithSet {
 	return updateStatus{scope: scope{Database: d, Tables: []Table{table}}}
-}
-
-type UpdateWithTable interface {
-	Set(field Field, value interface{}) UpdateWithSet
 }
 
 type UpdateWithSet interface {
@@ -45,6 +42,9 @@ func (s updateStatus) Where(conditions ...BooleanExpression) UpdateWithWhere {
 func (s updateStatus) GetSQL() (string, error) {
 	sqlString := "UPDATE " + s.scope.Tables[0].GetSQL(s.scope)
 
+	if len(s.assignments) == 0 {
+		return "", errors.New("no set in update")
+	}
 	assignmentsSql, err := commaAssignments(s.scope, s.assignments)
 	if err != nil {
 		return "", err
