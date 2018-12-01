@@ -3,17 +3,15 @@ package sqlingo
 import (
 	"context"
 	"database/sql"
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
 	"time"
 )
 
 type Database interface {
-	SetDebugMode(debugMode bool)
 	GetDB() *sql.DB
 	BeginTx(ctx context.Context, opts *sql.TxOptions, f func(tx Transaction) error) error
 	Query(sql string) (Cursor, error)
 	Execute(sql string) (sql.Result, error)
+	SetLogger(logger func(sql string, durationNano int64))
 
 	Select(fields ...interface{}) SelectWithFields
 	SelectDistinct(fields ...interface{}) SelectWithFields
@@ -29,14 +27,14 @@ type txOrDB interface {
 }
 
 type database struct {
-	db        *sql.DB
-	tx        *sql.Tx
-	debugMode bool
-	dialect   string
+	db      *sql.DB
+	tx      *sql.Tx
+	logger  func(sql string, durationNano int64)
+	dialect string
 }
 
-func (d *database) SetDebugMode(debugMode bool) {
-	d.debugMode = debugMode
+func (d *database) SetLogger(logger func(sql string, durationNano int64)) {
+	d.logger = logger
 }
 
 func Open(driverName string, dataSourceName string) (db Database, err error) {
@@ -71,7 +69,9 @@ func (d *database) Query(sql string) (Cursor, error) {
 	startTime := time.Now().UnixNano()
 	rows, err := d.getTxOrDB().Query(sql)
 	endTime := time.Now().UnixNano()
-	printLog(endTime-startTime, sql)
+	if d.logger != nil {
+		d.logger(sql, endTime-startTime)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -83,12 +83,8 @@ func (d *database) Execute(sql string) (sql.Result, error) {
 	startTime := time.Now().UnixNano()
 	result, err := d.getTxOrDB().Exec(sql)
 	endTime := time.Now().UnixNano()
-	printLog(endTime-startTime, sql)
+	if d.logger != nil {
+		d.logger(sql, endTime-startTime)
+	}
 	return result, err
-}
-
-var printer = message.NewPrinter(language.English)
-
-func printLog(duration int64, sql string) {
-	printer.Printf("[%9d µs] %s\n", duration/1000, sql)
 }
