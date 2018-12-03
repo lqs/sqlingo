@@ -104,78 +104,78 @@ func If(predicate Expression, trueValue Expression, falseValue Expression) (resu
 }
 
 func commaFields(scope scope, fields []Field) (string, error) {
-	sql := ""
+	var sqlBuilder strings.Builder
 	for i, item := range fields {
 		if i > 0 {
-			sql += ", "
+			sqlBuilder.WriteString(", ")
 		}
 		itemSql, err := item.GetSQL(scope)
 		if err != nil {
 			return "", err
 		}
-		sql += itemSql
+		sqlBuilder.WriteString(itemSql)
 	}
-	return sql, nil
+	return sqlBuilder.String(), nil
 }
 
 func commaExpressions(scope scope, expressions []Expression) (string, error) {
-	sql := ""
+	var sqlBuilder strings.Builder
 	for i, item := range expressions {
 		if i > 0 {
-			sql += ", "
+			sqlBuilder.WriteString(", ")
 		}
 		itemSql, err := item.GetSQL(scope)
 		if err != nil {
 			return "", err
 		}
-		sql += itemSql
+		sqlBuilder.WriteString(itemSql)
 	}
-	return sql, nil
+	return sqlBuilder.String(), nil
 }
 
 func commaValues(scope scope, values []interface{}) (string, error) {
-	sql := ""
+	var sqlBuilder strings.Builder
 	for i, item := range values {
 		if i > 0 {
-			sql += ", "
+			sqlBuilder.WriteString(", ")
 		}
 		itemSql, _, err := getSQLFromWhatever(scope, item)
 		if err != nil {
 			return "", err
 		}
-		sql += itemSql
+		sqlBuilder.WriteString(itemSql)
 	}
-	return sql, nil
+	return sqlBuilder.String(), nil
 }
 
 func commaAssignments(scope scope, assignments []assignment) (string, error) {
-	sql := ""
+	var sqlBuilder strings.Builder
 	for i, item := range assignments {
 		if i > 0 {
-			sql += ", "
+			sqlBuilder.WriteString(", ")
 		}
 		itemSql, err := item.GetSQL(scope)
 		if err != nil {
 			return "", err
 		}
-		sql += itemSql
+		sqlBuilder.WriteString(itemSql)
 	}
-	return sql, nil
+	return sqlBuilder.String(), nil
 }
 
 func commaOrderBys(scope scope, orderBys []OrderBy) (string, error) {
-	sql := ""
+	var sqlBuilder strings.Builder
 	for i, item := range orderBys {
 		if i > 0 {
-			sql += ", "
+			sqlBuilder.WriteString(", ")
 		}
 		itemSql, err := item.GetSQL(scope)
 		if err != nil {
 			return "", err
 		}
-		sql += itemSql
+		sqlBuilder.WriteString(itemSql)
 	}
-	return sql, nil
+	return sqlBuilder.String(), nil
 }
 
 func getSQLForName(name string) string {
