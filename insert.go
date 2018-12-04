@@ -53,7 +53,7 @@ func (s insertStatus) Fields(fields ...Field) InsertWithValues {
 
 func (s insertStatus) Values(values ...interface{}) InsertWithValues {
 	s.values = append([]interface{}{}, s.values...)
-	s.values = append(s.values, values...)
+	s.values = append(s.values, values)
 	return s
 }
 
