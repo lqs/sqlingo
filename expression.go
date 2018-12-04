@@ -50,6 +50,7 @@ type NumberExpression interface {
 	Mod(other interface{}) NumberExpression
 
 	Sum() NumberExpression
+	Avg() NumberExpression
 	Min() UnknownExpression
 	Max() UnknownExpression
 }
@@ -71,6 +72,7 @@ type UnknownExpression interface {
 	Mod(other interface{}) NumberExpression
 
 	Sum() NumberExpression
+	Avg() NumberExpression
 	Min() UnknownExpression
 	Max() UnknownExpression
 }
@@ -240,6 +242,10 @@ func (e expression) Sum() NumberExpression {
 	return function("SUM", e)
 }
 
+func (e expression) Avg() NumberExpression {
+	return function("AVG", e)
+}
+
 func (e expression) Min() UnknownExpression {
 	return function("MIN", e)
 }
@@ -289,15 +295,6 @@ func (e expression) Not() BooleanExpression {
 
 func (e expression) IsNotNull() BooleanExpression {
 	return e.prefixSuffixExpression("", " IS NOT NULL", 11)
-}
-
-func isSelect(s interface{}) bool {
-	switch s.(type) {
-	case Select:
-		return true
-	default:
-		return false
-	}
 }
 
 func (e expression) In(values ...interface{}) BooleanExpression {
