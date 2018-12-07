@@ -200,7 +200,7 @@ func getCallerInfo(db Database) string {
 		if !ok {
 			break
 		}
-		if strings.Contains(file, "/sqlingo@v") {
+		if file == "" || strings.Contains(file, "/sqlingo@v") {
 			continue
 		}
 		segs := strings.Split(file, "/")
