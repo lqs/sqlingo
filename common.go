@@ -81,6 +81,10 @@ func Function(name string, args ...interface{}) Expression {
 	return function(name, args...)
 }
 
+func Count(arg interface{}) NumberExpression {
+	return function("COUNT", arg)
+}
+
 func command(args ...interface{}) expression {
 	return expression{builder: func(scope scope) (string, error) {
 		sql := ""

@@ -9,7 +9,7 @@ import (
 type Select interface {
 	GetSQL() (string, error)
 	FetchFirst(out ...interface{}) (bool, error)
-	FetchAll(out interface{}) error
+	FetchAll(dest ...interface{}) (rows int, err error)
 	FetchCursor() (Cursor, error)
 	Exists() (bool, error)
 	Count() (int, error)
@@ -95,6 +95,9 @@ func (d *database) Select(fields ...interface{}) SelectWithFields {
 }
 
 func (s selectStatus) From(tables ...Table) SelectWithTables {
+	if len(s.fields) == 0 {
+		return s.scope.Database.SelectFrom(tables...)
+	}
 	for _, table := range tables {
 		s.scope.Tables = append(s.scope.Tables, table)
 	}
@@ -285,28 +288,42 @@ func (s selectStatus) FetchFirst(dest ...interface{}) (ok bool, err error) {
 	return
 }
 
-func (s selectStatus) FetchAll(dest interface{}) error {
-	if reflect.ValueOf(dest).Kind() != reflect.Ptr {
-		return errors.New("dest should be a pointer")
-	}
-	val := reflect.Indirect(reflect.ValueOf(dest))
-	if val.Kind() != reflect.Slice {
-		return errors.New("dest should be pointed to a slice")
+func (s selectStatus) FetchAll(dest ...interface{}) (rows int, err error) {
+	count := len(dest)
+	values := make([]reflect.Value, count)
+	for i, item := range dest {
+		if reflect.ValueOf(item).Kind() != reflect.Ptr {
+			err = errors.New("dest should be a pointer")
+			return
+		}
+		val := reflect.Indirect(reflect.ValueOf(item))
+		if val.Kind() != reflect.Slice {
+			err = errors.New("dest should be pointed to a slice")
+			return
+		}
+		values[i] = val
 	}
 	cursor, err := s.FetchCursor()
 	if err != nil {
-		return err
+		return
 	}
 	defer cursor.Close()
 
-	for cursor.Next() {
-		elem := reflect.New(val.Type().Elem())
-		row := elem.Interface()
-		err = cursor.Scan(row)
-		if err != nil {
-			return err
-		}
-		val.Set(reflect.Append(val, reflect.Indirect(elem)))
+	elements := make([]reflect.Value, count)
+	pointers := make([]interface{}, count)
+	for i := 0; i < count; i++ {
+		elements[i] = reflect.New(values[i].Type().Elem())
+		pointers[i] = elements[i].Interface()
 	}
-	return nil
+	for cursor.Next() {
+		err = cursor.Scan(pointers...)
+		if err != nil {
+			return
+		}
+		for i := 0; i < count; i++ {
+			values[i].Set(reflect.Append(values[i], reflect.Indirect(elements[i])))
+		}
+		rows++
+	}
+	return
 }

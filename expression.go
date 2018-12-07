@@ -57,6 +57,8 @@ type NumberExpression interface {
 
 type StringExpression interface {
 	Expression
+	Min() UnknownExpression
+	Max() UnknownExpression
 }
 
 type UnknownExpression interface {

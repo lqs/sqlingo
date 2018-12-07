@@ -62,6 +62,10 @@ func preparePointers(val reflect.Value, scans *[]interface{}) error {
 }
 
 func (c cursor) Scan(dest ...interface{}) error {
+	if len(dest) == 0 {
+		// dry run
+		return nil
+	}
 
 	var scans []interface{}
 	for i, item := range dest {
