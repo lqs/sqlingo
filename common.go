@@ -187,12 +187,15 @@ func getSQLForName(name string) string {
 	return "`" + name + "`"
 }
 
-func getCallerInfo(db Database) string {
-	txInfo := ""
+func getCallerInfo(db Database, retry bool) string {
+	extraInfo := ""
 	switch db.(type) {
 	case *database:
 		if db.(*database).tx != nil {
-			txInfo = " (tx)"
+			extraInfo += " (tx)"
+		}
+		if retry {
+			extraInfo += " (retry)"
 		}
 	}
 	for i := 0; true; i++ {
@@ -205,7 +208,7 @@ func getCallerInfo(db Database) string {
 		}
 		segs := strings.Split(file, "/")
 		name := segs[len(segs)-1]
-		return fmt.Sprintf("/* %s:%d%s */ ", name, line, txInfo)
+		return fmt.Sprintf("/* %s:%d%s */ ", name, line, extraInfo)
 	}
 	return ""
 }

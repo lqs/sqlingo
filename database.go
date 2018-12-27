@@ -12,6 +12,7 @@ type Database interface {
 	Query(sql string) (Cursor, error)
 	Execute(sql string) (sql.Result, error)
 	SetLogger(logger func(sql string, durationNano int64))
+	SetRetryPolicy(retryPolicy func(err error) bool)
 
 	Select(fields ...interface{}) SelectWithFields
 	SelectDistinct(fields ...interface{}) SelectWithFields
@@ -27,14 +28,19 @@ type txOrDB interface {
 }
 
 type database struct {
-	db      *sql.DB
-	tx      *sql.Tx
-	logger  func(sql string, durationNano int64)
-	dialect string
+	db          *sql.DB
+	tx          *sql.Tx
+	logger      func(sql string, durationNano int64)
+	dialect     string
+	retryPolicy func(error) bool
 }
 
 func (d *database) SetLogger(logger func(sql string, durationNano int64)) {
 	d.logger = logger
+}
+
+func (d *database) SetRetryPolicy(retryPolicy func(err error) bool) {
+	d.retryPolicy = retryPolicy
 }
 
 func Open(driverName string, dataSourceName string) (db Database, err error) {
@@ -64,22 +70,29 @@ func (d *database) getTxOrDB() txOrDB {
 	}
 }
 
-func (d *database) Query(sql string) (Cursor, error) {
-	sql = getCallerInfo(d) + sql
+func (d *database) Query(sqlString string) (Cursor, error) {
 	startTime := time.Now().UnixNano()
-	rows, err := d.getTxOrDB().Query(sql)
-	endTime := time.Now().UnixNano()
-	if d.logger != nil {
-		d.logger(sql, endTime-startTime)
+	isRetry := false
+	for {
+		sqlStringWithCallerInfo := getCallerInfo(d, isRetry) + sqlString
+		rows, err := d.getTxOrDB().Query(sqlStringWithCallerInfo)
+		endTime := time.Now().UnixNano()
+		if d.logger != nil {
+			d.logger(sqlStringWithCallerInfo, endTime-startTime)
+		}
+		if err != nil {
+			isRetry = d.tx == nil && d.retryPolicy != nil && d.retryPolicy(err)
+			if isRetry {
+				continue
+			}
+			return nil, err
+		}
+		return cursor{rows: rows}, nil
 	}
-	if err != nil {
-		return nil, err
-	}
-	return cursor{rows: rows}, nil
 }
 
 func (d *database) Execute(sql string) (sql.Result, error) {
-	sql = getCallerInfo(d) + sql
+	sql = getCallerInfo(d, false) + sql
 	startTime := time.Now().UnixNano()
 	result, err := d.getTxOrDB().Exec(sql)
 	endTime := time.Now().UnixNano()
