@@ -13,6 +13,7 @@ type Database interface {
 	Execute(sql string) (sql.Result, error)
 	SetLogger(logger func(sql string, durationNano int64))
 	SetRetryPolicy(retryPolicy func(err error) bool)
+	EnableCallerInfo(enableCallerInfo bool)
 
 	Select(fields ...interface{}) SelectWithFields
 	SelectDistinct(fields ...interface{}) SelectWithFields
@@ -28,11 +29,12 @@ type txOrDB interface {
 }
 
 type database struct {
-	db          *sql.DB
-	tx          *sql.Tx
-	logger      func(sql string, durationNano int64)
-	dialect     string
-	retryPolicy func(error) bool
+	db               *sql.DB
+	tx               *sql.Tx
+	logger           func(sql string, durationNano int64)
+	dialect          string
+	retryPolicy      func(error) bool
+	enableCallerInfo bool
 }
 
 func (d *database) SetLogger(logger func(sql string, durationNano int64)) {
@@ -41,6 +43,10 @@ func (d *database) SetLogger(logger func(sql string, durationNano int64)) {
 
 func (d *database) SetRetryPolicy(retryPolicy func(err error) bool) {
 	d.retryPolicy = retryPolicy
+}
+
+func (d *database) EnableCallerInfo(enableCallerInfo bool) {
+	d.enableCallerInfo = enableCallerInfo
 }
 
 func Open(driverName string, dataSourceName string) (db Database, err error) {
@@ -58,11 +64,11 @@ func Open(driverName string, dataSourceName string) (db Database, err error) {
 	return
 }
 
-func (d *database) GetDB() *sql.DB {
+func (d database) GetDB() *sql.DB {
 	return d.db
 }
 
-func (d *database) getTxOrDB() txOrDB {
+func (d database) getTxOrDB() txOrDB {
 	if d.tx != nil {
 		return d.tx
 	} else {
@@ -70,7 +76,7 @@ func (d *database) getTxOrDB() txOrDB {
 	}
 }
 
-func (d *database) Query(sqlString string) (Cursor, error) {
+func (d database) Query(sqlString string) (Cursor, error) {
 	startTime := time.Now().UnixNano()
 	isRetry := false
 	for {
@@ -91,7 +97,7 @@ func (d *database) Query(sqlString string) (Cursor, error) {
 	}
 }
 
-func (d *database) Execute(sql string) (sql.Result, error) {
+func (d database) Execute(sql string) (sql.Result, error) {
 	sql = getCallerInfo(d, false) + sql
 	startTime := time.Now().UnixNano()
 	result, err := d.getTxOrDB().Exec(sql)

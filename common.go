@@ -187,16 +187,16 @@ func getSQLForName(name string) string {
 	return "`" + name + "`"
 }
 
-func getCallerInfo(db Database, retry bool) string {
+func getCallerInfo(db database, retry bool) string {
+	if !db.enableCallerInfo {
+		return ""
+	}
 	extraInfo := ""
-	switch db.(type) {
-	case *database:
-		if db.(*database).tx != nil {
-			extraInfo += " (tx)"
-		}
-		if retry {
-			extraInfo += " (retry)"
-		}
+	if db.tx != nil {
+		extraInfo += " (tx)"
+	}
+	if retry {
+		extraInfo += " (retry)"
 	}
 	for i := 0; true; i++ {
 		_, file, line, ok := runtime.Caller(i)
