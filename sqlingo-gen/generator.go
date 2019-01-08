@@ -94,7 +94,10 @@ func getTableNames(db *sql.DB) (tableNames []string, err error) {
 	}
 	for rows.Next() {
 		var name string
-		rows.Scan(&name)
+		err = rows.Scan(&name)
+		if err != nil {
+			return
+		}
 		tableNames = append(tableNames, name)
 	}
 	return
