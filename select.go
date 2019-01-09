@@ -288,6 +288,30 @@ func (s selectStatus) FetchFirst(dest ...interface{}) (ok bool, err error) {
 	return
 }
 
+func (s selectStatus) fetchAllAsMap(mapType reflect.Type) (mapValue reflect.Value, err error) {
+	// destMapPtr: *map[K][V]
+
+	mapValue = reflect.MakeMap(mapType)
+	key := reflect.New(mapType.Key())
+	elem := reflect.New(mapType.Elem())
+
+	cursor, err := s.FetchCursor()
+	if err != nil {
+		return
+	}
+	defer cursor.Close()
+
+	for cursor.Next() {
+		err = cursor.Scan(key.Interface(), elem.Interface())
+		if err != nil {
+			return
+		}
+
+		mapValue.SetMapIndex(reflect.Indirect(key), reflect.Indirect(elem))
+	}
+	return
+}
+
 func (s selectStatus) FetchAll(dest ...interface{}) (rows int, err error) {
 	count := len(dest)
 	values := make([]reflect.Value, count)
@@ -297,11 +321,26 @@ func (s selectStatus) FetchAll(dest ...interface{}) (rows int, err error) {
 			return
 		}
 		val := reflect.Indirect(reflect.ValueOf(item))
-		if val.Kind() != reflect.Slice {
+
+		switch val.Kind() {
+		case reflect.Slice:
+			values[i] = val
+		case reflect.Map:
+			if len(dest) != 1 {
+				err = errors.New("dest map should be 1 element")
+				return
+			}
+			var mapValue reflect.Value
+			mapValue, err = s.fetchAllAsMap(val.Type())
+			if err != nil {
+				return
+			}
+			reflect.ValueOf(item).Elem().Set(mapValue)
+			return
+		default:
 			err = errors.New("dest should be pointed to a slice")
 			return
 		}
-		values[i] = val
 	}
 	cursor, err := s.FetchCursor()
 	if err != nil {
