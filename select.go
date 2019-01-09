@@ -288,18 +288,10 @@ func (s selectStatus) FetchFirst(dest ...interface{}) (ok bool, err error) {
 	return
 }
 
-func (s selectStatus) fetchAllAsMap(mapType reflect.Type) (mapValue reflect.Value, err error) {
-	// destMapPtr: *map[K][V]
-
+func (s selectStatus) fetchAllAsMap(cursor Cursor, mapType reflect.Type) (mapValue reflect.Value, err error) {
 	mapValue = reflect.MakeMap(mapType)
 	key := reflect.New(mapType.Key())
 	elem := reflect.New(mapType.Elem())
-
-	cursor, err := s.FetchCursor()
-	if err != nil {
-		return
-	}
-	defer cursor.Close()
 
 	for cursor.Next() {
 		err = cursor.Scan(key.Interface(), elem.Interface())
@@ -313,6 +305,12 @@ func (s selectStatus) fetchAllAsMap(mapType reflect.Type) (mapValue reflect.Valu
 }
 
 func (s selectStatus) FetchAll(dest ...interface{}) (rows int, err error) {
+	cursor, err := s.FetchCursor()
+	if err != nil {
+		return
+	}
+	defer cursor.Close()
+
 	count := len(dest)
 	values := make([]reflect.Value, count)
 	for i, item := range dest {
@@ -331,7 +329,7 @@ func (s selectStatus) FetchAll(dest ...interface{}) (rows int, err error) {
 				return
 			}
 			var mapValue reflect.Value
-			mapValue, err = s.fetchAllAsMap(val.Type())
+			mapValue, err = s.fetchAllAsMap(cursor, val.Type())
 			if err != nil {
 				return
 			}
@@ -342,11 +340,6 @@ func (s selectStatus) FetchAll(dest ...interface{}) (rows int, err error) {
 			return
 		}
 	}
-	cursor, err := s.FetchCursor()
-	if err != nil {
-		return
-	}
-	defer cursor.Close()
 
 	elements := make([]reflect.Value, count)
 	pointers := make([]interface{}, count)
