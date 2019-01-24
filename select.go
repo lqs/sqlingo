@@ -1,6 +1,7 @@
 package sqlingo
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"strconv"
@@ -22,7 +23,7 @@ type SelectWithFields interface {
 
 type SelectWithTables interface {
 	Select
-	SelectOrderBy
+	OrderBy(orderBys ...OrderBy) SelectWithOrder
 	Where(conditions ...BooleanExpression) SelectWithWhere
 	GroupBy(expressions ...Expression) SelectWithGroupBy
 	Limit(limit int) SelectWithLimit
@@ -30,8 +31,8 @@ type SelectWithTables interface {
 
 type SelectWithWhere interface {
 	Select
-	SelectOrderBy
 	GroupBy(expressions ...Expression) SelectWithGroupBy
+	OrderBy(orderBys ...OrderBy) SelectWithOrder
 }
 
 type SelectWithGroupBy interface {
@@ -42,10 +43,6 @@ type SelectWithGroupBy interface {
 
 type SelectWithGroupByHaving interface {
 	SelectWithOrder
-	OrderBy(orderBys ...OrderBy) SelectWithOrder
-}
-
-type SelectOrderBy interface {
 	OrderBy(orderBys ...OrderBy) SelectWithOrder
 }
 
@@ -63,6 +60,14 @@ type SelectWithOffset interface {
 	Select
 }
 
+type SelectWithContext interface {
+	FetchFirst(out ...interface{}) (bool, error)
+	FetchAll(dest ...interface{}) (rows int, err error)
+	FetchCursor() (Cursor, error)
+	Exists() (bool, error)
+	Count() (int, error)
+}
+
 type selectStatus struct {
 	scope    scope
 	distinct bool
@@ -73,6 +78,7 @@ type selectStatus struct {
 	having   BooleanExpression
 	limit    *int
 	offset   *int
+	ctx      context.Context
 }
 
 func getFields(fields []interface{}) (result []Field) {
@@ -256,13 +262,26 @@ func (s selectStatus) GetSQL() (string, error) {
 	return sql, nil
 }
 
+func (s selectStatus) WithContext(ctx context.Context) SelectWithContext {
+	s.ctx = ctx
+	return s
+}
+
+func (s selectStatus) getContext() context.Context {
+	if s.ctx != nil {
+		return s.ctx
+	} else {
+		return context.Background()
+	}
+}
+
 func (s selectStatus) FetchCursor() (Cursor, error) {
 	sqlString, err := s.GetSQL()
 	if err != nil {
 		return nil, err
 	}
 
-	cursor, err := s.scope.Database.Query(sqlString)
+	cursor, err := s.scope.Database.QueryContext(s.getContext(), sqlString)
 	if err != nil {
 		return nil, err
 	}

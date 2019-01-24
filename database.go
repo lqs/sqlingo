@@ -10,7 +10,9 @@ type Database interface {
 	GetDB() *sql.DB
 	BeginTx(ctx context.Context, opts *sql.TxOptions, f func(tx Transaction) error) error
 	Query(sql string) (Cursor, error)
+	QueryContext(ctx context.Context, sqlString string) (Cursor, error)
 	Execute(sql string) (sql.Result, error)
+	ExecuteContext(ctx context.Context, sql string) (sql.Result, error)
 	SetLogger(logger func(sql string, durationNano int64))
 	SetRetryPolicy(retryPolicy func(err error) bool)
 	EnableCallerInfo(enableCallerInfo bool)
@@ -24,8 +26,8 @@ type Database interface {
 }
 
 type txOrDB interface {
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	Exec(query string, args ...interface{}) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 }
 
 type database struct {
@@ -77,11 +79,15 @@ func (d database) getTxOrDB() txOrDB {
 }
 
 func (d database) Query(sqlString string) (Cursor, error) {
+	return d.QueryContext(context.Background(), sqlString)
+}
+
+func (d database) QueryContext(ctx context.Context, sqlString string) (Cursor, error) {
 	startTime := time.Now().UnixNano()
 	isRetry := false
 	for {
 		sqlStringWithCallerInfo := getCallerInfo(d, isRetry) + sqlString
-		rows, err := d.getTxOrDB().Query(sqlStringWithCallerInfo)
+		rows, err := d.getTxOrDB().QueryContext(ctx, sqlStringWithCallerInfo)
 		endTime := time.Now().UnixNano()
 		if d.logger != nil {
 			d.logger(sqlStringWithCallerInfo, endTime-startTime)
@@ -98,9 +104,13 @@ func (d database) Query(sqlString string) (Cursor, error) {
 }
 
 func (d database) Execute(sql string) (sql.Result, error) {
+	return d.ExecuteContext(context.Background(), sql)
+}
+
+func (d database) ExecuteContext(ctx context.Context, sql string) (sql.Result, error) {
 	sql = getCallerInfo(d, false) + sql
 	startTime := time.Now().UnixNano()
-	result, err := d.getTxOrDB().Exec(sql)
+	result, err := d.getTxOrDB().ExecContext(ctx, sql)
 	endTime := time.Now().UnixNano()
 	if d.logger != nil {
 		d.logger(sql, endTime-startTime)
