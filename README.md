@@ -6,8 +6,6 @@
 
 **sqlingo** is a SQL DSL library in Go. It generates code from the database and lets you write SQL easily and correctly.
 
-**WARNING: sqlingo is still under development. It's expected to be released in December 2018.**
-
 ## Tutorial
 
 ### Install and use sqlingo code generator
