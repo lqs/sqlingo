@@ -132,6 +132,14 @@ func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority in
 		sql = strconv.FormatInt(reflect.ValueOf(value).Int(), 10)
 	case uint, uint8, uint16, uint32, uint64:
 		sql = strconv.FormatUint(reflect.ValueOf(value).Uint(), 10)
+	case bool:
+		if value.(bool) {
+			sql = "1"
+		} else {
+			sql = "0"
+		}
+	case float32, float64:
+		sql = strconv.FormatFloat(reflect.ValueOf(value).Float(), 'g', -1, 64)
 	case string:
 		sql = "\"" + strings.Replace(value.(string), "\"", "\\\"", -1) + "\""
 	case []interface{}:
@@ -146,21 +154,20 @@ func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority in
 			return
 		}
 		v := reflect.ValueOf(value)
-		for v.Kind() == reflect.Ptr {
-			if v.IsNil() {
-				sql = "NULL"
-				return
+		if v.Kind() == reflect.Ptr {
+			for {
+				if v.IsNil() {
+					sql = "NULL"
+					return
+				}
+				v = reflect.Indirect(v)
+				if v.Kind() != reflect.Ptr {
+					break
+				}
 			}
-			return getSQLFromWhatever(scope, reflect.Indirect(v).Interface())
+			return getSQLFromWhatever(scope, v.Interface())
 		}
-		switch v.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return getSQLFromWhatever(scope, v.Int())
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return getSQLFromWhatever(scope, v.Uint())
-		default:
-			err = fmt.Errorf("invalid type %s", v.Kind().String())
-		}
+		err = fmt.Errorf("invalid type %s", v.Kind().String())
 	}
 	return
 }
