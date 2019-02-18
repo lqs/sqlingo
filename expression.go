@@ -163,6 +163,16 @@ func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority in
 			sql = strconv.FormatFloat(v.Float(), 'g', -1, 64)
 		case reflect.String:
 			sql = "\"" + strings.Replace(v.String(), "\"", "\\\"", -1) + "\""
+		case reflect.Slice:
+			length := v.Len()
+			values := make([]interface{}, length)
+			for i := 0; i < length; i++ {
+				values[i] = v.Index(i).Interface()
+			}
+			sql, err = commaValues(scope, values)
+			if err == nil {
+				sql = "(" + sql + ")"
+			}
 		default:
 			err = fmt.Errorf("invalid type %s", v.Kind().String())
 		}
