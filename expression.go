@@ -128,26 +128,6 @@ func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority in
 		sql = "(" + sql + ")"
 	case Table:
 		sql = value.(Table).GetSQL(scope)
-	case int, int8, int16, int32, int64:
-		sql = strconv.FormatInt(reflect.ValueOf(value).Int(), 10)
-	case uint, uint8, uint16, uint32, uint64:
-		sql = strconv.FormatUint(reflect.ValueOf(value).Uint(), 10)
-	case bool:
-		if value.(bool) {
-			sql = "1"
-		} else {
-			sql = "0"
-		}
-	case float32, float64:
-		sql = strconv.FormatFloat(reflect.ValueOf(value).Float(), 'g', -1, 64)
-	case string:
-		sql = "\"" + strings.Replace(value.(string), "\"", "\\\"", -1) + "\""
-	case []interface{}:
-		sql, err = commaValues(scope, value.([]interface{}))
-		if err != nil {
-			return
-		}
-		sql = "(" + sql + ")"
 	default:
 		if value == nil {
 			sql = "NULL"
@@ -167,7 +147,25 @@ func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority in
 			}
 			return getSQLFromWhatever(scope, v.Interface())
 		}
-		err = fmt.Errorf("invalid type %s", v.Kind().String())
+
+		switch v.Kind() {
+		case reflect.Bool:
+			if v.Bool() {
+				sql = "1"
+			} else {
+				sql = "0"
+			}
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			sql = strconv.FormatInt(v.Int(), 10)
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			sql = strconv.FormatUint(v.Uint(), 10)
+		case reflect.Float32, reflect.Float64:
+			sql = strconv.FormatFloat(v.Float(), 'g', -1, 64)
+		case reflect.String:
+			sql = "\"" + strings.Replace(v.String(), "\"", "\\\"", -1) + "\""
+		default:
+			err = fmt.Errorf("invalid type %s", v.Kind().String())
+		}
 	}
 	return
 }
