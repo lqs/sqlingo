@@ -128,6 +128,8 @@ func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority in
 		sql = "(" + sql + ")"
 	case Table:
 		sql = value.(Table).GetSQL(scope)
+	case CaseExpression:
+		return getSQLFromWhatever(scope, value.(CaseExpression).End())
 	default:
 		if value == nil {
 			sql = "NULL"
