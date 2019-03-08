@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"strconv"
 )
 
 type Cursor interface {
@@ -61,6 +62,17 @@ func preparePointers(val reflect.Value, scans *[]interface{}) error {
 	return nil
 }
 
+func parseBool(s []byte) (bool, error) {
+	if len(s) == 1 {
+		if s[0] == 0 {
+			return false, nil
+		} else if s[0] == 1 {
+			return true, nil
+		}
+	}
+	return strconv.ParseBool(string(s))
+}
+
 func (c cursor) Scan(dest ...interface{}) error {
 	if len(dest) == 0 {
 		// dry run
@@ -81,7 +93,48 @@ func (c cursor) Scan(dest ...interface{}) error {
 		}
 	}
 
+	pbs := make(map[int]*bool)
+	ppbs := make(map[int]**bool)
+
+	for i, scan := range scans {
+		if pb, ok := scan.(*bool); ok {
+			var s []uint8
+			scans[i] = &s
+			pbs[i] = pb
+		} else if ppb, ok := scan.(**bool); ok {
+			var s *[]uint8
+			scans[i] = &s
+			ppbs[i] = ppb
+		}
+	}
+
 	err := c.rows.Scan(scans...)
+	if err != nil {
+		return err
+	}
+
+	for i, pb := range pbs {
+		if *(scans[i].(*[]byte)) == nil {
+			return fmt.Errorf("field %d is null", i)
+		}
+		b, err := parseBool(*(scans[i].(*[]byte)))
+		if err != nil {
+			return err
+		}
+		*pb = b
+	}
+	for i, ppb := range ppbs {
+		if *(scans[i].(**[]uint8)) == nil {
+			*ppb = nil
+		} else {
+			b, err := parseBool(**(scans[i].(**[]byte)))
+			if err != nil {
+				return err
+			}
+			*ppb = &b
+		}
+	}
+
 	return err
 }
 
