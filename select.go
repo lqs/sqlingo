@@ -83,7 +83,12 @@ type selectStatus struct {
 
 func getFields(fields []interface{}) (result []Field) {
 	for _, field := range fields {
-		fieldCopy := field
+		var fieldCopy interface{}
+		if booleanField, ok := field.(BooleanField); ok {
+			fieldCopy = booleanField.Equals(true)
+		} else {
+			fieldCopy = field
+		}
 		fieldExpression := expression{builder: func(scope scope) (string, error) {
 			sql, _, err := getSQLFromWhatever(scope, fieldCopy)
 			if err != nil {
@@ -111,15 +116,13 @@ func (s selectStatus) From(tables ...Table) SelectWithTables {
 }
 
 func (d *database) SelectFrom(tables ...Table) SelectWithTables {
-	s := selectStatus{scope: scope{Database: d}}
+	var fields []interface{}
 	for _, table := range tables {
-		s.scope.Tables = append(s.scope.Tables, table)
-		fields := table.GetFields()
-		for _, field := range fields {
-			s.fields = append(s.fields, field)
+		for _, field := range table.GetFields() {
+			fields = append(fields, field)
 		}
 	}
-	return s
+	return d.Select(fields...).From(tables...)
 }
 
 func (d *database) SelectDistinct(fields ...interface{}) SelectWithFields {
