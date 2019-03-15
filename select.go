@@ -1,71 +1,94 @@
 package sqlingo
 
 import (
-	"context"
+	. "context"
 	"errors"
 	"reflect"
 	"strconv"
 )
 
-type Select interface {
-	GetSQL() (string, error)
-	FetchFirst(out ...interface{}) (bool, error)
-	FetchAll(dest ...interface{}) (rows int, err error)
-	FetchCursor() (Cursor, error)
-	Exists() (bool, error)
-	Count() (int, error)
-}
-
 type SelectWithFields interface {
-	Select
+	toSelectWithContext
+	toSelectFinal
 	From(tables ...Table) SelectWithTables
 }
 
 type SelectWithTables interface {
-	Select
-	OrderBy(orderBys ...OrderBy) SelectWithOrder
+	toSelectWithLock
+	toSelectWithContext
+	toSelectFinal
 	Where(conditions ...BooleanExpression) SelectWithWhere
 	GroupBy(expressions ...Expression) SelectWithGroupBy
+	OrderBy(orderBys ...OrderBy) SelectWithOrder
 	Limit(limit int) SelectWithLimit
 }
 
 type SelectWithWhere interface {
-	Select
+	toSelectWithLock
+	toSelectWithContext
+	toSelectFinal
 	GroupBy(expressions ...Expression) SelectWithGroupBy
 	OrderBy(orderBys ...OrderBy) SelectWithOrder
+	Limit(limit int) SelectWithLimit
 }
 
 type SelectWithGroupBy interface {
-	Select
+	toSelectWithLock
+	toSelectWithContext
+	toSelectFinal
 	Having(conditions ...BooleanExpression) SelectWithGroupByHaving
 	OrderBy(orderBys ...OrderBy) SelectWithOrder
+	Limit(limit int) SelectWithLimit
 }
 
 type SelectWithGroupByHaving interface {
-	SelectWithOrder
+	toSelectWithLock
+	toSelectWithContext
+	toSelectFinal
 	OrderBy(orderBys ...OrderBy) SelectWithOrder
 }
 
 type SelectWithOrder interface {
-	Select
+	toSelectWithLock
+	toSelectWithContext
+	toSelectFinal
 	Limit(limit int) SelectWithLimit
 }
 
 type SelectWithLimit interface {
-	Select
+	toSelectWithLock
+	toSelectWithContext
+	toSelectFinal
 	Offset(offset int) SelectWithOffset
 }
 
 type SelectWithOffset interface {
-	Select
+	toSelectWithLock
+	toSelectWithContext
+	toSelectFinal
 }
 
-type SelectWithContext interface {
+type toSelectWithLock interface {
+	LockInShareMode() SelectWithLock
+	ForUpdate() SelectWithLock
+}
+
+type SelectWithLock interface {
+	toSelectWithContext
+	toSelectFinal
+}
+
+type toSelectWithContext interface {
+	WithContext(ctx Context) toSelectFinal
+}
+
+type toSelectFinal interface {
+	Exists() (bool, error)
+	Count() (int, error)
+	GetSQL() (string, error)
 	FetchFirst(out ...interface{}) (bool, error)
 	FetchAll(dest ...interface{}) (rows int, err error)
 	FetchCursor() (Cursor, error)
-	Exists() (bool, error)
-	Count() (int, error)
 }
 
 type selectStatus struct {
@@ -78,7 +101,8 @@ type selectStatus struct {
 	having   BooleanExpression
 	limit    *int
 	offset   *int
-	ctx      context.Context
+	ctx      Context
+	lock     string
 }
 
 func getFields(fields []interface{}) (result []Field) {
@@ -111,6 +135,7 @@ func (s selectStatus) From(tables ...Table) SelectWithTables {
 }
 
 func (d *database) SelectFrom(tables ...Table) SelectWithTables {
+
 	s := selectStatus{scope: scope{Database: d}}
 	for _, table := range tables {
 		s.scope.Tables = append(s.scope.Tables, table)
@@ -181,6 +206,16 @@ func (s selectStatus) Count() (count int, err error) {
 	}
 
 	return
+}
+
+func (s selectStatus) LockInShareMode() SelectWithLock {
+	s.lock = " LOCK IN SHARE MODE"
+	return s
+}
+
+func (s selectStatus) ForUpdate() SelectWithLock {
+	s.lock = " FOR UPDATE"
+	return s
 }
 
 func (s selectStatus) asDerivedTable(name string) Table {
@@ -262,16 +297,16 @@ func (s selectStatus) GetSQL() (string, error) {
 	return sql, nil
 }
 
-func (s selectStatus) WithContext(ctx context.Context) SelectWithContext {
+func (s selectStatus) WithContext(ctx Context) toSelectFinal {
 	s.ctx = ctx
 	return s
 }
 
-func (s selectStatus) getContext() context.Context {
+func (s selectStatus) getContext() Context {
 	if s.ctx != nil {
 		return s.ctx
 	} else {
-		return context.Background()
+		return Background()
 	}
 }
 

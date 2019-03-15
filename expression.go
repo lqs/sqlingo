@@ -120,8 +120,8 @@ func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority in
 		priority = value.(Expression).getOperatorPriority()
 	case Assignment:
 		sql, err = value.(Assignment).GetSQL(scope)
-	case Select:
-		sql, err = value.(Select).GetSQL()
+	case toSelectFinal:
+		sql, err = value.(toSelectFinal).GetSQL()
 		if err != nil {
 			return
 		}
@@ -337,7 +337,7 @@ func (e expression) In(values ...interface{}) BooleanExpression {
 
 		if len(values) == 1 {
 			value := values[0]
-			if select_, ok := value.(Select); ok {
+			if select_, ok := value.(toSelectFinal); ok {
 				// IN subquery
 				valuesSql, err = select_.GetSQL()
 				if err != nil {
