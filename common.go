@@ -67,24 +67,6 @@ func Or(expressions ...BooleanExpression) (result BooleanExpression) {
 	return
 }
 
-func function(name string, args ...interface{}) expression {
-	return expression{builder: func(scope scope) (string, error) {
-		valuesSql, err := commaValues(scope, args)
-		if err != nil {
-			return "", err
-		}
-		return name + "(" + valuesSql + ")", nil
-	}}
-}
-
-func Function(name string, args ...interface{}) Expression {
-	return function(name, args...)
-}
-
-func Count(arg interface{}) NumberExpression {
-	return function("COUNT", arg)
-}
-
 func command(args ...interface{}) expression {
 	return expression{builder: func(scope scope) (string, error) {
 		sql := ""
@@ -101,10 +83,6 @@ func command(args ...interface{}) expression {
 		}
 		return sql, nil
 	}}
-}
-
-func If(predicate Expression, trueValue Expression, falseValue Expression) (result Expression) {
-	return Function("IF", predicate, trueValue, falseValue)
 }
 
 func commaFields(scope scope, fields []Field) (string, error) {
