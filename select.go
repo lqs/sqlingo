@@ -294,6 +294,8 @@ func (s selectStatus) GetSQL() (string, error) {
 		sql += " OFFSET " + strconv.Itoa(*s.offset)
 	}
 
+	sql += s.lock
+
 	return sql, nil
 }
 
