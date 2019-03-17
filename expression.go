@@ -87,6 +87,7 @@ type expression struct {
 type scope struct {
 	Database Database
 	Tables   []Table
+	lastJoin *join
 }
 
 func staticExpression(sql string, priority int) expression {

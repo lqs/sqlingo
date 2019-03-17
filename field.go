@@ -19,7 +19,7 @@ type StringField interface {
 func newFieldExpression(tableName string, fieldName string) expression {
 	return expression{builder: func(scope scope) (string, error) {
 		sql := getSQLForName(fieldName)
-		if len(scope.Tables) != 1 || scope.Tables[0].GetName() != tableName {
+		if len(scope.Tables) != 1 || scope.lastJoin != nil || scope.Tables[0].GetName() != tableName {
 			sql = getSQLForName(tableName) + "." + sql
 		}
 		return sql, nil
