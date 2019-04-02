@@ -115,6 +115,10 @@ func (e expression) GetSQL(scope scope) (string, error) {
 }
 
 func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority int, err error) {
+	if value == nil {
+		sql = "NULL"
+		return
+	}
 	switch value.(type) {
 	case Expression:
 		sql, err = value.(Expression).GetSQL(scope)
@@ -130,12 +134,8 @@ func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority in
 	case Table:
 		sql = value.(Table).GetSQL(scope)
 	case CaseExpression:
-		return getSQLFromWhatever(scope, value.(CaseExpression).End())
+		sql, err = value.(CaseExpression).End().GetSQL(scope)
 	default:
-		if value == nil {
-			sql = "NULL"
-			return
-		}
 		v := reflect.ValueOf(value)
 		if v.Kind() == reflect.Ptr {
 			for {
@@ -166,7 +166,7 @@ func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority in
 			sql = strconv.FormatFloat(v.Float(), 'g', -1, 64)
 		case reflect.String:
 			sql = "\"" + strings.Replace(v.String(), "\"", "\\\"", -1) + "\""
-		case reflect.Slice:
+		case reflect.Array, reflect.Slice:
 			length := v.Len()
 			values := make([]interface{}, length)
 			for i := 0; i < length; i++ {
@@ -320,7 +320,8 @@ func (e expression) IsNotNull() BooleanExpression {
 func (e expression) In(values ...interface{}) BooleanExpression {
 	if len(values) == 1 {
 		value := reflect.ValueOf(values[0])
-		if value.Kind() == reflect.Slice {
+		kind := value.Kind()
+		if kind == reflect.Array || kind == reflect.Slice {
 			length := value.Len()
 			values = make([]interface{}, length)
 			for i := 0; i < length; i++ {
