@@ -16,6 +16,7 @@ type Database interface {
 	SetLogger(logger func(sql string, durationNano int64))
 	SetRetryPolicy(retryPolicy func(err error) bool)
 	EnableCallerInfo(enableCallerInfo bool)
+	SetInterceptor(interceptor InterceptorFunc)
 
 	Select(fields ...interface{}) SelectWithFields
 	SelectDistinct(fields ...interface{}) SelectWithFields
@@ -37,6 +38,7 @@ type database struct {
 	dialect          string
 	retryPolicy      func(error) bool
 	enableCallerInfo bool
+	interceptor      InterceptorFunc
 }
 
 func (d *database) SetLogger(logger func(sql string, durationNano int64)) {
@@ -49,6 +51,10 @@ func (d *database) SetRetryPolicy(retryPolicy func(err error) bool) {
 
 func (d *database) EnableCallerInfo(enableCallerInfo bool) {
 	d.enableCallerInfo = enableCallerInfo
+}
+
+func (d *database) SetInterceptor(interceptor InterceptorFunc) {
+	d.interceptor = interceptor
 }
 
 func Open(driverName string, dataSourceName string) (db Database, err error) {
@@ -86,8 +92,25 @@ func (d database) QueryContext(ctx context.Context, sqlString string) (Cursor, e
 	startTime := time.Now().UnixNano()
 	isRetry := false
 	for {
+		var rows *sql.Rows
+		invoker := func(ctx context.Context, sql string) (err error) {
+			rows, err = d.getTxOrDB().QueryContext(ctx, sql)
+			return
+		}
+
 		sqlStringWithCallerInfo := getCallerInfo(d, isRetry) + sqlString
-		rows, err := d.getTxOrDB().QueryContext(ctx, sqlStringWithCallerInfo)
+
+		interceptor := d.interceptor
+		var err error
+		if interceptor == nil {
+			err = invoker(ctx, sqlStringWithCallerInfo)
+		} else {
+			err = interceptor(ctx, sqlStringWithCallerInfo, invoker)
+		}
+		if err != nil {
+			return nil, err
+		}
+
 		endTime := time.Now().UnixNano()
 		if d.logger != nil {
 			d.logger(sqlStringWithCallerInfo, endTime-startTime)
