@@ -197,17 +197,19 @@ func (s selectStatus) From(tables ...Table) SelectWithTables {
 	if len(s.fields) == 0 {
 		return s.scope.Database.SelectFrom(tables...)
 	}
-	for _, table := range tables {
-		s.scope.Tables = append(s.scope.Tables, table)
-	}
+	s.scope.Tables = tables
 	return s
 }
 
 func (d *database) SelectFrom(tables ...Table) SelectWithTables {
-
-	s := selectStatus{scope: scope{Database: d}}
+	s := selectStatus{scope: scope{Database: d, Tables: tables}}
+	fieldCount := 0
 	for _, table := range tables {
-		s.scope.Tables = append(s.scope.Tables, table)
+		fields := table.GetFields()
+		fieldCount += len(fields)
+	}
+	s.fields = make([]Field, 0, fieldCount)
+	for _, table := range tables {
 		fields := table.GetFields()
 		for _, field := range fields {
 			s.fields = append(s.fields, field)
@@ -300,16 +302,18 @@ func (s selectStatus) Exists() (exists bool, err error) {
 }
 
 func (s selectStatus) GetSQL() (string, error) {
-	sql := "SELECT "
+	var sb strings.Builder
+	sb.Grow(128)
+	sb.WriteString("SELECT ")
 	if s.distinct {
-		sql += "DISTINCT "
+		sb.WriteString("DISTINCT ")
 	}
 
 	fieldsSql, err := commaFields(s.scope, s.fields)
 	if err != nil {
 		return "", err
 	}
-	sql += fieldsSql
+	sb.WriteString(fieldsSql)
 
 	if len(s.scope.Tables) > 0 {
 		var values []interface{}
@@ -320,7 +324,8 @@ func (s selectStatus) GetSQL() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		sql += " FROM " + fromSql
+		sb.WriteString(" FROM ")
+		sb.WriteString(fromSql)
 	}
 
 	if s.scope.lastJoin != nil {
@@ -329,16 +334,18 @@ func (s selectStatus) GetSQL() (string, error) {
 			joins = append(joins, j)
 		}
 		count := len(joins)
-		var sb strings.Builder
 		for i := count - 1; i >= 0; i-- {
 			join := joins[i]
 			onSql, err := join.on.GetSQL(s.scope)
 			if err != nil {
 				return "", err
 			}
-			sb.WriteString(join.prefix + " JOIN " + join.table.GetSQL(s.scope) + " ON " + onSql)
+			sb.WriteString(join.prefix)
+			sb.WriteString(" JOIN ")
+			sb.WriteString(join.table.GetSQL(s.scope))
+			sb.WriteString(" ON ")
+			sb.WriteString(onSql)
 		}
-		sql += sb.String() + " "
 	}
 
 	if s.where != nil {
@@ -346,7 +353,8 @@ func (s selectStatus) GetSQL() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		sql += " WHERE " + whereSql
+		sb.WriteString(" WHERE ")
+		sb.WriteString(whereSql)
 	}
 
 	if len(s.groupBys) != 0 {
@@ -354,14 +362,16 @@ func (s selectStatus) GetSQL() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		sql += " GROUP BY " + groupBySql
+		sb.WriteString(" GROUP BY ")
+		sb.WriteString(groupBySql)
 
 		if s.having != nil {
 			havingSql, err := s.having.GetSQL(s.scope)
 			if err != nil {
 				return "", err
 			}
-			sql += " HAVING " + havingSql
+			sb.WriteString(" HAVING ")
+			sb.WriteString(havingSql)
 		}
 	}
 
@@ -370,20 +380,23 @@ func (s selectStatus) GetSQL() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		sql += " ORDER BY " + orderBySql
+		sb.WriteString(" ORDER BY ")
+		sb.WriteString(orderBySql)
 	}
 
 	if s.limit != nil {
-		sql += " LIMIT " + strconv.Itoa(*s.limit)
+		sb.WriteString(" LIMIT ")
+		sb.WriteString(strconv.Itoa(*s.limit))
 	}
 
 	if s.offset != nil {
-		sql += " OFFSET " + strconv.Itoa(*s.offset)
+		sb.WriteString(" OFFSET ")
+		sb.WriteString(strconv.Itoa(*s.offset))
 	}
 
-	sql += s.lock
+	sb.WriteString(s.lock)
 
-	return sql, nil
+	return sb.String(), nil
 }
 
 func (s selectStatus) WithContext(ctx Context) toSelectFinal {

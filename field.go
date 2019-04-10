@@ -17,12 +17,13 @@ type StringField interface {
 }
 
 func newFieldExpression(tableName string, fieldName string) expression {
+	shortFieldNameSql := getSQLForName(fieldName)
+	fullFieldNameSql := getSQLForName(tableName) + "." + shortFieldNameSql
 	return expression{builder: func(scope scope) (string, error) {
-		sql := getSQLForName(fieldName)
 		if len(scope.Tables) != 1 || scope.lastJoin != nil || scope.Tables[0].GetName() != tableName {
-			sql = getSQLForName(tableName) + "." + sql
+			return fullFieldNameSql, nil
 		}
-		return sql, nil
+		return shortFieldNameSql, nil
 	}}
 }
 
