@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 )
 
 type Expression interface {
@@ -114,6 +113,23 @@ func (e expression) GetSQL(scope scope) (string, error) {
 	return e.builder(scope)
 }
 
+func escape(s string) string {
+	bytes := []byte(s)
+	n := 0
+	buf := make([]byte, len(s)*2)
+
+	for _, b := range bytes {
+		switch b {
+		case 0, '\n', '\r', '\\', '\'', '"', 0x1a:
+			buf[n] = '\\'
+			n++
+		}
+		buf[n] = b
+		n++
+	}
+	return string(buf[:n])
+}
+
 func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority int, err error) {
 	if value == nil {
 		sql = "NULL"
@@ -165,7 +181,7 @@ func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority in
 		case reflect.Float32, reflect.Float64:
 			sql = strconv.FormatFloat(v.Float(), 'g', -1, 64)
 		case reflect.String:
-			sql = "\"" + strings.Replace(v.String(), "\"", "\\\"", -1) + "\""
+			sql = "\"" + escape(v.String()) + "\""
 		case reflect.Array, reflect.Slice:
 			length := v.Len()
 			values := make([]interface{}, length)
