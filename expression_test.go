@@ -1,12 +1,9 @@
 package sqlingo
 
-import "testing"
-
-func assertValue(t *testing.T, value interface{}, expectedSql string) {
-	if generatedSql, _, _ := getSQLFromWhatever(scope{}, value); generatedSql != expectedSql {
-		t.Errorf("value [%v] generated [%s] expected [%s]", value, generatedSql, expectedSql)
-	}
-}
+import (
+	"errors"
+	"testing"
+)
 
 func TestExpression(t *testing.T) {
 	assertValue(t, nil, "NULL")
@@ -118,4 +115,15 @@ func TestFunc(t *testing.T) {
 	assertValue(t, e7.Add(e5), "e7 + e5")
 	assertValue(t, e5.Add(e9), "e5 + (e9)")
 	assertValue(t, e9.Add(e5), "(e9) + e5")
+
+	ee := expression{
+		builder: func(scope scope) (string, error) {
+			return "", errors.New("error")
+		},
+	}
+	assertError(t, e.Add(ee))
+	assertError(t, ee.Add(e))
+	assertError(t, ee.IsNull())
+	assertError(t, e.In(ee, ee, ee))
+	assertError(t, ee.In(e, e, e))
 }
