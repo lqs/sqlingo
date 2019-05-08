@@ -34,16 +34,19 @@ func (a assignment) GetSQL(scope scope) (string, error) {
 }
 
 func Raw(sql string) UnknownExpression {
-	return staticExpression(sql, 99)
+	return expression{
+		sql:      sql,
+		priority: 99,
+	}
 }
 
 func And(expressions ...BooleanExpression) (result BooleanExpression) {
 	if len(expressions) == 0 {
-		result = staticExpression("1", 0)
+		result = trueExpression()
 		return
 	}
-	for i, condition := range expressions {
-		if i == 0 {
+	for _, condition := range expressions {
+		if result == nil {
 			result = condition
 		} else {
 			result = result.And(condition)
@@ -54,11 +57,11 @@ func And(expressions ...BooleanExpression) (result BooleanExpression) {
 
 func Or(expressions ...BooleanExpression) (result BooleanExpression) {
 	if len(expressions) == 0 {
-		result = staticExpression("0", 0)
+		result = falseExpression()
 		return
 	}
-	for i, condition := range expressions {
-		if i == 0 {
+	for _, condition := range expressions {
+		if result == nil {
 			result = condition
 		} else {
 			result = result.Or(condition)

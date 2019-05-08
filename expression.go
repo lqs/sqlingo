@@ -82,6 +82,9 @@ type expression struct {
 	sql      string
 	builder  func(scope scope) (string, error)
 	priority int
+	isTrue   bool
+	isFalse  bool
+	isStatic bool
 }
 
 type scope struct {
@@ -94,6 +97,23 @@ func staticExpression(sql string, priority int) expression {
 	return expression{
 		sql:      sql,
 		priority: priority,
+		isStatic: true,
+	}
+}
+
+func trueExpression() expression {
+	return expression{
+		sql:      "1",
+		isTrue:   true,
+		isStatic: true,
+	}
+}
+
+func falseExpression() expression {
+	return expression{
+		sql:      "0",
+		isFalse:  true,
+		isStatic: true,
 	}
 }
 
@@ -248,10 +268,16 @@ func (e expression) GreaterThanOrEquals(other interface{}) BooleanExpression {
 }
 
 func (e expression) And(other interface{}) BooleanExpression {
+	if e.isFalse {
+		return e
+	}
 	return e.binaryOperation("AND", other, 14)
 }
 
 func (e expression) Or(other interface{}) BooleanExpression {
+	if e.isTrue {
+		return e
+	}
 	return e.binaryOperation("OR", other, 16)
 }
 
@@ -331,6 +357,12 @@ func (e expression) IsNull() BooleanExpression {
 }
 
 func (e expression) Not() BooleanExpression {
+	if e.isTrue {
+		return falseExpression()
+	}
+	if e.isFalse {
+		return trueExpression()
+	}
 	return e.prefixSuffixExpression("NOT ", "", 13)
 }
 
@@ -351,7 +383,7 @@ func (e expression) In(values ...interface{}) BooleanExpression {
 		}
 	}
 	if len(values) == 0 {
-		return staticExpression("0", 0)
+		return falseExpression()
 	}
 	return expression{builder: func(scope scope) (string, error) {
 
