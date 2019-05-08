@@ -127,3 +127,18 @@ func TestFunc(t *testing.T) {
 	assertError(t, e.In(ee, ee, ee))
 	assertError(t, ee.In(e, e, e))
 }
+
+func TestLogicalOptimizer(t *testing.T) {
+	trueValue := And()
+	falseValue := Or()
+
+	assertValue(t, trueValue.Or(trueValue), "1")
+	assertValue(t, trueValue.Or(falseValue), "1")
+	assertValue(t, falseValue.Or(trueValue), "0 OR 1")
+	assertValue(t, falseValue.Or(falseValue), "0 OR 0")
+
+	assertValue(t, trueValue.And(trueValue), "1 AND 1")
+	assertValue(t, trueValue.And(falseValue), "1 AND 0")
+	assertValue(t, falseValue.And(trueValue), "0")
+	assertValue(t, falseValue.And(falseValue), "0")
+}
