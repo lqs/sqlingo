@@ -22,7 +22,7 @@ func Count(arg interface{}) NumberExpression {
 	return function("COUNT", arg)
 }
 
-func If(predicate Expression, trueValue Expression, falseValue Expression) (result Expression) {
+func If(predicate Expression, trueValue interface{}, falseValue interface{}) (result Expression) {
 	return function("IF", predicate, trueValue, falseValue)
 }
 

@@ -228,7 +228,7 @@ func (s selectStatus) Where(conditions ...BooleanExpression) SelectWithWhere {
 }
 
 func (s selectStatus) GroupBy(expressions ...Expression) SelectWithGroupBy {
-	s.groupBys = append([]Expression{}, expressions...)
+	s.groupBys = expressions
 	return s
 }
 
@@ -238,7 +238,7 @@ func (s selectStatus) Having(conditions ...BooleanExpression) SelectWithGroupByH
 }
 
 func (s selectStatus) OrderBy(orderBys ...OrderBy) SelectWithOrder {
-	s.orderBys = append([]OrderBy{}, orderBys...)
+	s.orderBys = orderBys
 	return s
 }
 

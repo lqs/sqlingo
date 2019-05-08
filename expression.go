@@ -79,6 +79,7 @@ type UnknownExpression interface {
 }
 
 type expression struct {
+	sql      string
 	builder  func(scope scope) (string, error)
 	priority int
 }
@@ -90,9 +91,10 @@ type scope struct {
 }
 
 func staticExpression(sql string, priority int) expression {
-	return expression{builder: func(scope scope) (string, error) {
-		return sql, nil
-	}, priority: priority}
+	return expression{
+		sql:      sql,
+		priority: priority,
+	}
 }
 
 func (e expression) As(name string) Alias {
@@ -110,6 +112,9 @@ func (e expression) IfNull(altValue interface{}) Expression {
 }
 
 func (e expression) GetSQL(scope scope) (string, error) {
+	if e.sql != "" {
+		return e.sql, nil
+	}
 	return e.builder(scope)
 }
 
@@ -159,7 +164,7 @@ func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority in
 					sql = "NULL"
 					return
 				}
-				v = reflect.Indirect(v)
+				v = v.Elem()
 				if v.Kind() != reflect.Ptr {
 					break
 				}
