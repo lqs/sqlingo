@@ -149,24 +149,6 @@ func (s selectStatus) RightJoin(table Table) SelectWithJoin {
 	return s
 }
 
-func (s *join) tosql(scope scope) (string, error) {
-	var joins []*join
-	for j := s; j != nil; j = j.previous {
-		joins = append(joins, j)
-	}
-	count := len(joins)
-	var sb strings.Builder
-	for i := count - 1; i >= 0; i-- {
-		join := joins[i]
-		onSql, err := join.on.GetSQL(scope)
-		if err != nil {
-			return "", err
-		}
-		sb.WriteString(join.prefix + " JOIN " + join.table.GetSQL(scope) + " ON " + onSql)
-	}
-	return sb.String(), nil
-}
-
 func (s selectStatus) On(condition BooleanExpression) SelectWithJoinOn {
 	join := *s.scope.lastJoin
 	join.on = condition
@@ -248,7 +230,7 @@ func (s selectStatus) Limit(limit int) SelectWithLimit {
 }
 
 func (s selectStatus) Offset(offset int) SelectWithOffset {
-	s.limit = &offset
+	s.offset = &offset
 	return s
 }
 
