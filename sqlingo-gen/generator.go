@@ -170,6 +170,8 @@ func generateTable(db *sql.DB, tableName string) (string, error) {
 	modelClassName := className + "Model"
 
 	fields := ""
+	fieldsSQL := ""
+	fullFieldsSQL := ""
 	values := ""
 
 	for rows.Next() {
@@ -194,7 +196,8 @@ func generateTable(db *sql.DB, tableName string) (string, error) {
 			}
 		}
 
-		goName := convertCase(row["Field"])
+		fieldName := row["Field"]
+		goName := convertCase(fieldName)
 		goType, fieldClass, err := getType(row["Type"], row["Null"] == "YES")
 		if err != nil {
 			return "", err
@@ -205,10 +208,21 @@ func generateTable(db *sql.DB, tableName string) (string, error) {
 		tableLines += "\t" + goName + " " + fieldStructName + "\n"
 		modelLines += "\t" + goName + " " + goType + "\n"
 		objectLines += "\t" + goName + ": " + fieldStructName + "{"
-		objectLines += "New" + fieldClass + "(" + wrapQuote(tableName) + ", " + wrapQuote(row["Field"]) + ")},\n"
+		objectLines += "New" + fieldClass + "(" + wrapQuote(tableName) + ", " + wrapQuote(fieldName) + ")},\n"
 		classLines += "type " + fieldStructName + " struct{ " + fieldClass + " }\n"
 
 		fields += "t." + goName + ", "
+
+		if fieldsSQL != "" {
+			fieldsSQL += ", "
+		}
+		fieldsSQL += "`" + fieldName + "`"
+
+		if fullFieldsSQL != "" {
+			fullFieldsSQL += ", "
+		}
+		fullFieldsSQL += "`" + tableName + "`.`" + fieldName + "`"
+
 		values += "m." + goName + ", "
 	}
 
@@ -225,6 +239,14 @@ func generateTable(db *sql.DB, tableName string) (string, error) {
 
 	code += "func (t t" + className + ") GetFields() []Field {\n"
 	code += "\treturn []Field{" + fields + "}\n"
+	code += "}\n\n"
+
+	code += "func (t t" + className + ") GetFieldsSQL() string {\n"
+	code += " return " + wrapQuote(fieldsSQL) + "\n"
+	code += "}\n\n"
+
+	code += "func (t t" + className + ") GetFullFieldsSQL() string {\n"
+	code += " return " + wrapQuote(fullFieldsSQL) + "\n"
 	code += "}\n\n"
 
 	code += "type " + modelClassName + " struct {\n"
