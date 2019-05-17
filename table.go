@@ -4,6 +4,8 @@ type Table interface {
 	GetName() string
 	GetSQL(scope scope) string
 	GetFields() []Field
+	GetFieldsSQL() string
+	GetFullFieldsSQL() string
 }
 
 type table struct {
@@ -31,6 +33,14 @@ func NewTable(name string) Table {
 type derivedTable struct {
 	name    string
 	select_ selectStatus
+}
+
+func (t derivedTable) GetFieldsSQL() string {
+	return ""
+}
+
+func (t derivedTable) GetFullFieldsSQL() string {
+	return ""
 }
 
 func (t derivedTable) GetName() string {
