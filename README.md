@@ -5,7 +5,7 @@
 [![codecov](https://codecov.io/gh/lqs/sqlingo/branch/master/graph/badge.svg)](https://codecov.io/gh/lqs/sqlingo)
 [![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
 
-**sqlingo** is a SQL DSL (a.k.a. SQL Builder or ORM) library in Go. It generates code from the database and lets you write SQL queries in a elegant way.
+**sqlingo** is a SQL DSL (a.k.a. SQL Builder or ORM) library in Go. It generates code from the database and lets you write SQL queries in an elegant way.
 
 ## Features
 * Auto-generating DSL objects and model structs from the database so you don't need to manually keep things in sync
