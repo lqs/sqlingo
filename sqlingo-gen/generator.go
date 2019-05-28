@@ -56,7 +56,7 @@ func getType(s string, nullable bool) (goType string, fieldClass string, err err
 	case "float", "double", "decimal":
 		goType = "float64"
 		fieldClass = "NumberField"
-	case "char", "varchar", "text", "tinytext", "mediumtext", "longtext", "enum", "datetime", "date", "time", "timestamp":
+	case "char", "varchar", "text", "tinytext", "mediumtext", "longtext", "enum", "datetime", "date", "time", "timestamp", "json":
 		goType = "string"
 		fieldClass = "StringField"
 	case "blob", "tinyblob", "mediumblob", "longblob":
