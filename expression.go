@@ -84,11 +84,10 @@ type expression struct {
 	priority int
 	isTrue   bool
 	isFalse  bool
-	isStatic bool
 }
 
 type scope struct {
-	Database Database
+	Database *database
 	Tables   []Table
 	lastJoin *join
 }
@@ -97,23 +96,20 @@ func staticExpression(sql string, priority int) expression {
 	return expression{
 		sql:      sql,
 		priority: priority,
-		isStatic: true,
 	}
 }
 
 func trueExpression() expression {
 	return expression{
-		sql:      "1",
-		isTrue:   true,
-		isStatic: true,
+		sql:    "1",
+		isTrue: true,
 	}
 }
 
 func falseExpression() expression {
 	return expression{
-		sql:      "0",
-		isFalse:  true,
-		isStatic: true,
+		sql:     "0",
+		isFalse: true,
 	}
 }
 
@@ -343,6 +339,12 @@ func (e expression) binaryOperation(operator string, value interface{}, priority
 }
 
 func (e expression) prefixSuffixExpression(prefix string, suffix string, priority int) expression {
+	if e.sql != "" {
+		return expression{
+			sql:      prefix + e.sql + suffix,
+			priority: priority,
+		}
+	}
 	return expression{builder: func(scope scope) (string, error) {
 		exprSql, err := e.GetSQL(scope)
 		if err != nil {

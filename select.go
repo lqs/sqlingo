@@ -123,7 +123,7 @@ type join struct {
 type selectStatus struct {
 	scope    scope
 	distinct bool
-	fields   []Field
+	fields   FieldList
 	where    BooleanExpression
 	orderBys []OrderBy
 	groupBys []Expression
@@ -176,28 +176,12 @@ func (d *database) Select(fields ...interface{}) SelectWithFields {
 }
 
 func (s selectStatus) From(tables ...Table) SelectWithTables {
-	if len(s.fields) == 0 {
-		return s.scope.Database.SelectFrom(tables...)
-	}
 	s.scope.Tables = tables
 	return s
 }
 
 func (d *database) SelectFrom(tables ...Table) SelectWithTables {
-	s := selectStatus{scope: scope{Database: d, Tables: tables}}
-	fieldCount := 0
-	for _, table := range tables {
-		fields := table.GetFields()
-		fieldCount += len(fields)
-	}
-	s.fields = make([]Field, 0, fieldCount)
-	for _, table := range tables {
-		fields := table.GetFields()
-		for _, field := range fields {
-			s.fields = append(s.fields, field)
-		}
-	}
-	return s
+	return selectStatus{scope: scope{Database: d, Tables: tables}}
 }
 
 func (d *database) SelectDistinct(fields ...interface{}) SelectWithFields {
@@ -237,17 +221,14 @@ func (s selectStatus) Offset(offset int) SelectWithOffset {
 func (s selectStatus) Count() (count int, err error) {
 	if len(s.groupBys) == 0 {
 		if s.distinct {
-			var fields []interface{}
-			for _, field := range s.fields {
-				fields = append(fields, field)
-			}
+			fields := s.fields
 			s.distinct = false
 			s.fields = []Field{expression{builder: func(scope scope) (string, error) {
-				valuesSql, err := commaValues(scope, fields)
+				fieldsSql, err := fields.GetSQL(scope)
 				if err != nil {
 					return "", err
 				}
-				return "COUNT(DISTINCT " + valuesSql + ")", nil
+				return "COUNT(DISTINCT " + fieldsSql + ")", nil
 			}}}
 			_, err = s.FetchFirst(&count)
 		} else {
@@ -255,6 +236,9 @@ func (s selectStatus) Count() (count int, err error) {
 			_, err = s.FetchFirst(&count)
 		}
 	} else {
+		if !s.distinct {
+			s.fields = []Field{staticExpression("1", 0)}
+		}
 		_, err = s.scope.Database.Select(Function("COUNT", 1)).From(s.asDerivedTable("t")).FetchFirst(&count)
 	}
 
@@ -291,7 +275,7 @@ func (s selectStatus) GetSQL() (string, error) {
 		sb.WriteString("DISTINCT ")
 	}
 
-	fieldsSql, err := commaFields(s.scope, s.fields)
+	fieldsSql, err := s.fields.GetSQL(s.scope)
 	if err != nil {
 		return "", err
 	}

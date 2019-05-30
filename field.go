@@ -1,5 +1,7 @@
 package sqlingo
 
+import "strings"
+
 type Field interface {
 	Expression
 }
@@ -26,7 +28,6 @@ func newFieldExpression(tableName string, fieldName string) expression {
 			}
 			return shortFieldNameSql, nil
 		},
-		isStatic: true,
 	}
 }
 
@@ -40,4 +41,30 @@ func NewBooleanField(tableName string, fieldName string) BooleanField {
 
 func NewStringField(tableName string, fieldName string) StringField {
 	return newFieldExpression(tableName, fieldName)
+}
+
+type FieldList []Field
+
+func (fields FieldList) GetSQL(scope scope) (string, error) {
+	isSingleTable := len(scope.Tables) == 1 && scope.lastJoin == nil
+	var sb strings.Builder
+	if len(fields) == 0 {
+		for i, table := range scope.Tables {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			if isSingleTable {
+				sb.WriteString(table.GetFieldsSQL())
+			} else {
+				sb.WriteString(table.GetFullFieldsSQL())
+			}
+		}
+	} else {
+		fieldsSql, err := commaFields(scope, fields)
+		if err != nil {
+			return "", err
+		}
+		sb.WriteString(fieldsSql)
+	}
+	return sb.String(), nil
 }

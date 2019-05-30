@@ -20,6 +20,14 @@ func (t table1) GetFields() []Field {
 	return []Field{field1, field2}
 }
 
+func (t table1) GetFieldsSQL() string {
+	return "<fields sql>"
+}
+
+func (t table1) GetFullFieldsSQL() string {
+	return "<full fields sql>"
+}
+
 func TestSelect(t *testing.T) {
 	db := database{}
 	assertValue(t, db.Select(1), "(SELECT 1)")
