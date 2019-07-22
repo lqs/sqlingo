@@ -6,6 +6,7 @@ import (
 )
 
 type insertStatus struct {
+	method                          string
 	scope                           scope
 	fields                          []Field
 	values                          []interface{}
@@ -43,7 +44,11 @@ type InsertWithOnDuplicateKeyUpdate interface {
 }
 
 func (d *database) InsertInto(table Table) InsertWithTable {
-	return insertStatus{scope: scope{Database: d, Tables: []Table{table}}}
+	return insertStatus{method: "INSERT", scope: scope{Database: d, Tables: []Table{table}}}
+}
+
+func (d *database) ReplaceInto(table Table) InsertWithTable {
+	return insertStatus{method: "REPLACE", scope: scope{Database: d, Tables: []Table{table}}}
 }
 
 func (s insertStatus) Fields(fields ...Field) InsertWithValues {
@@ -127,7 +132,7 @@ func (s insertStatus) GetSQL() (string, error) {
 		return "", err
 	}
 
-	sqlString := "INSERT INTO " + tableSql + " (" + fieldsSql + ") VALUES " + valuesSql
+	sqlString := s.method + " INTO " + tableSql + " (" + fieldsSql + ") VALUES " + valuesSql
 	if len(s.onDuplicateKeyUpdateAssignments) > 0 {
 		assignmentsSql, err := commaAssignments(s.scope, s.onDuplicateKeyUpdateAssignments)
 		if err != nil {
