@@ -60,7 +60,8 @@ func getType(s string, nullable bool) (goType string, fieldClass string, err err
 		goType = "string"
 		fieldClass = "StringField"
 	case "binary", "varbinary", "blob", "tinyblob", "mediumblob", "longblob":
-		goType = "[]byte"
+                // TODO: use []byte ?
+		goType = "string"
 		fieldClass = "StringField"
 	case "bit":
 		if fieldSize == 1 {
