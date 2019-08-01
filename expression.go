@@ -58,6 +58,7 @@ type StringExpression interface {
 	Expression
 	Min() UnknownExpression
 	Max() UnknownExpression
+	Like(other interface{}) BooleanExpression
 }
 
 type UnknownExpression interface {
@@ -315,6 +316,10 @@ func (e expression) Min() UnknownExpression {
 
 func (e expression) Max() UnknownExpression {
 	return function("MAX", e)
+}
+
+func (e expression) Like(other interface{}) BooleanExpression {
+	return e.binaryOperation("LIKE", other, 11)
 }
 
 func (e expression) binaryOperation(operator string, value interface{}, priority int) expression {

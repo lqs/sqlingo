@@ -85,6 +85,8 @@ func TestFunc(t *testing.T) {
 	assertValue(t, e.In([]int64{1}), "<> = 1")
 	assertValue(t, e.In([]int64{1, 2, 3}), "<> IN (1, 2, 3)")
 
+	assertValue(t, e.Like("%A%"), "<> LIKE \"%A%\"")
+
 	assertValue(t, []interface{}{1, 2, 3, "d"}, "(1, 2, 3, \"d\")")
 
 	assertValue(t, e.IsNull(), "<> IS NULL")
