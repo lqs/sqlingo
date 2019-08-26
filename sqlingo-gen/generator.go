@@ -60,7 +60,7 @@ func getType(s string, nullable bool) (goType string, fieldClass string, err err
 		goType = "string"
 		fieldClass = "StringField"
 	case "binary", "varbinary", "blob", "tinyblob", "mediumblob", "longblob":
-                // TODO: use []byte ?
+		// TODO: use []byte ?
 		goType = "string"
 		fieldClass = "StringField"
 	case "bit":
@@ -144,13 +144,22 @@ func generate(driverName string, dataSourceName string, tableNames []string) (st
 		}
 		code += tableCode
 	}
-
+	code += generateTableMap(tableNames)
 	codeOut, err := format.Source([]byte(code))
 	if err != nil {
 		return "", err
 	}
-
 	return string(codeOut), nil
+}
+
+func generateTableMap(tableNames []string) (string) {
+	var tablePairs string = ""
+	for _, tableName := range tableNames {
+		tablePairs += "\t \"" + tableName + "\" : " + convertCase(tableName) + ",\n"
+	}
+	tableMapCode := fmt.Sprintf("var tableMap map[string]Table = map[string]Table {\n %s}\n", tablePairs)
+	tableMapCode += "func GetTable(name string) (Table) {\n\tif table, ok := tableMap[name]; ok {\n\t\treturn table\n\t}\n\treturn nil\n}\n"
+	return tableMapCode
 }
 
 func generateTable(db *sql.DB, tableName string) (string, error) {
