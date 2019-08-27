@@ -36,6 +36,10 @@ type derivedTable struct {
 	select_ selectStatus
 }
 
+func (t derivedTable) GetFieldByName(name string) Field {
+	return nil
+}
+
 func (t derivedTable) GetFieldsSQL() string {
 	return ""
 }
