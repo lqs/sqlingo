@@ -128,7 +128,7 @@ func generate(driverName string, dataSourceName string, tableNames []string) (st
 	}
 
 	code := "package " + *dbName + "_dsl\n"
-	code += "import . \"github.com/lqs/sqlingo\"\n"
+	code += "import(\n \t. \"github.com/lqs/sqlingo\"\n\t\"reflect\"\n)\n"
 
 	if len(tableNames) == 0 {
 		tableNames, err = getTableNames(mysql)
@@ -157,7 +157,7 @@ func generateTableMap(tableNames []string) (string) {
 	for _, tableName := range tableNames {
 		tablePairs += "\t \"" + tableName + "\" : " + convertCase(tableName) + ",\n"
 	}
-	tableMapCode := fmt.Sprintf("var tableMap map[string]Table = map[string]Table {\n %s}\n", tablePairs)
+	tableMapCode := fmt.Sprintf("var tableMap = map[string]Table {\n %s}\n", tablePairs)
 	tableMapCode += "func GetTable(name string) (Table) {\n\tif table, ok := tableMap[name]; ok {\n\t\treturn table\n\t}\n\treturn nil\n}\n"
 	return tableMapCode
 }
@@ -235,7 +235,6 @@ func generateTable(db *sql.DB, tableName string) (string, error) {
 
 		values += "m." + goName + ", "
 	}
-
 	code := ""
 	code += "type " + tableStructName + " struct {\n\tTable\n"
 	code += tableLines
@@ -249,6 +248,13 @@ func generateTable(db *sql.DB, tableName string) (string, error) {
 
 	code += "func (t t" + className + ") GetFields() []Field {\n"
 	code += "\treturn []Field{" + fields + "}\n"
+	code += "}\n\n"
+
+	code += "func (t t" + className + ") GetFieldByName(name string) Field {\n"
+	code += "\tr := reflect.ValueOf(t)\n"
+	code += "\tf := reflect.Indirect(r).FieldByName(CamelName(name))\n"
+	code += "\tif !f.IsValid() {\n\t\treturn nil\n\t}\n"
+	code += "\tif field, ok := f.Interface().(Field); ok {\n\t\treturn field\n\t}\n\treturn nil"
 	code += "}\n\n"
 
 	code += "func (t t" + className + ") GetFieldsSQL() string {\n"
