@@ -3,6 +3,7 @@ package sqlingo
 type Table interface {
 	GetName() string
 	GetSQL(scope scope) string
+	GetFieldByName(name string) Field
 	GetFields() []Field
 	GetFieldsSQL() string
 	GetFullFieldsSQL() string
