@@ -129,7 +129,7 @@ type selectStatus struct {
 	groupBys []Expression
 	having   BooleanExpression
 	limit    *int
-	offset   *int
+	offset   int
 	ctx      Context
 	lock     string
 }
@@ -214,7 +214,7 @@ func (s selectStatus) Limit(limit int) SelectWithLimit {
 }
 
 func (s selectStatus) Offset(offset int) SelectWithOffset {
-	s.offset = &offset
+	s.offset = offset
 	return s
 }
 
@@ -355,9 +355,9 @@ func (s selectStatus) GetSQL() (string, error) {
 		sb.WriteString(strconv.Itoa(*s.limit))
 	}
 
-	if s.offset != nil {
+	if s.offset != 0 {
 		sb.WriteString(" OFFSET ")
-		sb.WriteString(strconv.Itoa(*s.offset))
+		sb.WriteString(strconv.Itoa(s.offset))
 	}
 
 	sb.WriteString(s.lock)
