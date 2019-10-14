@@ -29,3 +29,7 @@ func If(predicate Expression, trueValue interface{}, falseValue interface{}) (re
 func Length(arg interface{}) NumberExpression {
 	return function("LENGTH", arg)
 }
+
+func Sum(arg interface{}) NumberExpression {
+	return function("SUM", arg)
+}
