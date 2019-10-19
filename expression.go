@@ -20,6 +20,7 @@ type Expression interface {
 	IsNull() BooleanExpression
 	IsNotNull() BooleanExpression
 	In(values ...interface{}) BooleanExpression
+	NotIn(values ...interface{}) BooleanExpression
 	Between(min interface{}, max interface{}) BooleanExpression
 	Desc() OrderBy
 
@@ -392,8 +393,37 @@ func (e expression) In(values ...interface{}) BooleanExpression {
 	if len(values) == 0 {
 		return falseExpression()
 	}
-	return expression{builder: func(scope scope) (string, error) {
+	joiner := func(exprSql, valuesSql string) string { return exprSql + " IN (" + valuesSql + ")" }
+	builder := e.getBuilder(e.Equals, joiner, values...)
+	return expression{builder: builder, priority: 11}
+}
 
+func (e expression) NotIn(values ...interface{}) BooleanExpression {
+	if len(values) == 1 {
+		value := reflect.ValueOf(values[0])
+		kind := value.Kind()
+		if kind == reflect.Array || kind == reflect.Slice {
+			length := value.Len()
+			values = make([]interface{}, length)
+			for i := 0; i < length; i++ {
+				values[i] = value.Index(i).Interface()
+			}
+		}
+	}
+	if len(values) == 0 {
+		return falseExpression()
+	}
+	joiner := func(exprSql, valuesSql string) string { return exprSql + " NOT IN (" + valuesSql + ")" }
+	builder := e.getBuilder(e.NotEquals, joiner, values...)
+	return expression{builder: builder, priority: 11}
+}
+
+type JoinerFunc = func(exprSql, valuesSql string) string
+type BooleanFunc = func(other interface{}) BooleanExpression
+type BuilderFunc = func(scope scope) (string, error)
+
+func (e expression) getBuilder(single BooleanFunc, joiner JoinerFunc, values ...interface{}) BuilderFunc {
+	return func(scope scope) (string, error) {
 		var valuesSql string
 		var err error
 
@@ -407,7 +437,7 @@ func (e expression) In(values ...interface{}) BooleanExpression {
 				}
 			} else {
 				// IN a single value
-				return e.Equals(value).GetSQL(scope)
+				return single(value).GetSQL(scope)
 			}
 		} else {
 			// IN a list
@@ -421,9 +451,8 @@ func (e expression) In(values ...interface{}) BooleanExpression {
 		if err != nil {
 			return "", err
 		}
-
-		return exprSql + " IN (" + valuesSql + ")", nil
-	}, priority: 11}
+		return joiner(exprSql, valuesSql), nil
+	}
 }
 
 func (e expression) Between(min interface{}, max interface{}) BooleanExpression {
