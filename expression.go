@@ -411,7 +411,7 @@ func (e expression) NotIn(values ...interface{}) BooleanExpression {
 		}
 	}
 	if len(values) == 0 {
-		return falseExpression()
+		return trueExpression()
 	}
 	joiner := func(exprSql, valuesSql string) string { return exprSql + " NOT IN (" + valuesSql + ")" }
 	builder := e.getBuilder(e.NotEquals, joiner, values...)

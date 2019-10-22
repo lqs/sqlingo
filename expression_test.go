@@ -85,10 +85,10 @@ func TestFunc(t *testing.T) {
 	assertValue(t, e.In([]int64{1}), "<> = 1")
 	assertValue(t, e.In([]int64{1, 2, 3}), "<> IN (1, 2, 3)")
 
-	assertValue(t, e.NotIn(), "0")
+	assertValue(t, e.NotIn(), "1")
 	assertValue(t, e.NotIn(1), "<> <> 1")
 	assertValue(t, e.NotIn(1, 2, 3), "<> NOT IN (1, 2, 3)")
-	assertValue(t, e.NotIn([]int64{}), "0")
+	assertValue(t, e.NotIn([]int64{}), "1")
 	assertValue(t, e.NotIn([]int64{1}), "<> <> 1")
 	assertValue(t, e.NotIn([]int64{1, 2, 3}), "<> NOT IN (1, 2, 3)")
 
