@@ -7,6 +7,7 @@ import (
 	"go/format"
 	"regexp"
 	"strconv"
+	"strings"
 	"unicode"
 )
 
@@ -171,7 +172,7 @@ func generateTable(db *sql.DB, tableName string) (string, error) {
 
 	tableLines := ""
 	modelLines := ""
-	objectLines := "\tTable: NewTable(\"" + tableName + "\"),\n"
+	objectLines := "\tTable: NewTable(\"" + tableName + "\"),\n\n"
 	classLines := ""
 
 	className := convertCase(tableName)
@@ -213,12 +214,24 @@ func generateTable(db *sql.DB, tableName string) (string, error) {
 			return "", err
 		}
 
+		commentLine := ""
+		if comment := row["Comment"]; comment != "" {
+			commentLine = "\t// " + strings.ReplaceAll(row["Comment"], "\n", " ") + "\n"
+		}
+
 		fieldStructName := "f" + className + goName
 
+
+		tableLines += commentLine
 		tableLines += "\t" + goName + " " + fieldStructName + "\n"
+
+		modelLines += commentLine
 		modelLines += "\t" + goName + " " + goType + "\n"
+
+		objectLines += commentLine
 		objectLines += "\t" + goName + ": " + fieldStructName + "{"
 		objectLines += "New" + fieldClass + "(" + wrapQuote(tableName) + ", " + wrapQuote(fieldName) + ")},\n"
+
 		classLines += "type " + fieldStructName + " struct{ " + fieldClass + " }\n"
 
 		fields += "t." + goName + ", "
@@ -236,7 +249,7 @@ func generateTable(db *sql.DB, tableName string) (string, error) {
 		values += "m." + goName + ", "
 	}
 	code := ""
-	code += "type " + tableStructName + " struct {\n\tTable\n"
+	code += "type " + tableStructName + " struct {\n\tTable\n\n"
 	code += tableLines
 	code += "}\n\n"
 
