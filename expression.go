@@ -170,6 +170,8 @@ func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority in
 			return
 		}
 		sql = "(" + sql + ")"
+	case toUpdateFinal:
+		sql, err = value.(toUpdateFinal).GetSQL()
 	case Table:
 		sql = value.(Table).GetSQL(scope)
 	case CaseExpression:

@@ -3,12 +3,16 @@ package sqlingo
 import (
 	"database/sql"
 	"errors"
+	"strconv"
+	"strings"
 )
 
 type updateStatus struct {
 	scope       scope
 	assignments []assignment
 	where       BooleanExpression
+	orderBys    []OrderBy
+	limit       *int
 }
 
 func (d *database) Update(table Table) UpdateWithSet {
@@ -18,9 +22,26 @@ func (d *database) Update(table Table) UpdateWithSet {
 type UpdateWithSet interface {
 	Set(Field Field, value interface{}) UpdateWithSet
 	Where(conditions ...BooleanExpression) UpdateWithWhere
+	OrderBy(orderBys ...OrderBy) UpdateWithOrder
+	Limit(limit int) UpdateWithLimit
 }
 
 type UpdateWithWhere interface {
+	toUpdateFinal
+	OrderBy(orderBys ...OrderBy) UpdateWithOrder
+	Limit(limit int) UpdateWithLimit
+}
+
+type UpdateWithOrder interface {
+	toUpdateFinal
+	Limit(limit int) UpdateWithLimit
+}
+
+type UpdateWithLimit interface {
+	toUpdateFinal
+}
+
+type toUpdateFinal interface {
 	GetSQL() (string, error)
 	Execute() (sql.Result, error)
 }
@@ -39,8 +60,22 @@ func (s updateStatus) Where(conditions ...BooleanExpression) UpdateWithWhere {
 	return s
 }
 
+func (s updateStatus) OrderBy(orderBys ...OrderBy) UpdateWithOrder {
+	s.orderBys = orderBys
+	return s
+}
+
+func (s updateStatus) Limit(limit int) UpdateWithLimit {
+	s.limit = &limit
+	return s
+}
+
 func (s updateStatus) GetSQL() (string, error) {
-	sqlString := "UPDATE " + s.scope.Tables[0].GetSQL(s.scope)
+	var sb strings.Builder
+	sb.Grow(128)
+
+	sb.WriteString("UPDATE ")
+	sb.WriteString(s.scope.Tables[0].GetSQL(s.scope))
 
 	if len(s.assignments) == 0 {
 		return "", errors.New("no set in update")
@@ -49,15 +84,33 @@ func (s updateStatus) GetSQL() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sqlString += " SET " + assignmentsSql
+	sb.WriteString(" SET ")
+	sb.WriteString(assignmentsSql)
 
-	whereSql, err := s.where.GetSQL(s.scope)
-	if err != nil {
-		return "", err
+	if s.where != nil {
+		whereSql, err := s.where.GetSQL(s.scope)
+		if err != nil {
+			return "", err
+		}
+		sb.WriteString(" WHERE ")
+		sb.WriteString(whereSql)
 	}
-	sqlString += " WHERE " + whereSql
 
-	return sqlString, nil
+	if len(s.orderBys) > 0 {
+		orderBySql, err := commaOrderBys(s.scope, s.orderBys)
+		if err != nil {
+			return "", err
+		}
+		sb.WriteString(" ORDER BY ")
+		sb.WriteString(orderBySql)
+	}
+
+	if s.limit != nil {
+		sb.WriteString(" LIMIT ")
+		sb.WriteString(strconv.Itoa(*s.limit))
+	}
+
+	return sb.String(), nil
 }
 
 func (s updateStatus) Execute() (sql.Result, error) {

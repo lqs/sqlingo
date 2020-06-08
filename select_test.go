@@ -12,9 +12,8 @@ type table1 struct {
 var Table1 = table1{
 	NewTable("table1"),
 }
-
 var field1 = NewNumberField("table1", "field1")
-var field2 = NewNumberField("table1", "field1")
+var field2 = NewNumberField("table1", "field2")
 
 func (t table1) GetFields() []Field {
 	return []Field{field1, field2}
