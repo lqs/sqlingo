@@ -129,7 +129,7 @@ func generate(driverName string, dataSourceName string, tableNames []string) (st
 	}
 
 	code := "package " + *dbName + "_dsl\n"
-	code += "import(\n \t. \"github.com/lqs/sqlingo\"\n\t\"reflect\"\n)\n"
+	code += "import . \"github.com/lqs/sqlingo\"\n"
 
 	if len(tableNames) == 0 {
 		tableNames, err = getTableNames(mysql)
@@ -153,7 +153,7 @@ func generate(driverName string, dataSourceName string, tableNames []string) (st
 	return string(codeOut), nil
 }
 
-func generateTableMap(tableNames []string) (string) {
+func generateTableMap(tableNames []string) string {
 	var tablePairs string = ""
 	for _, tableName := range tableNames {
 		tablePairs += "\t \"" + tableName + "\" : " + convertCase(tableName) + ",\n"
@@ -173,6 +173,7 @@ func generateTable(db *sql.DB, tableName string) (string, error) {
 	tableLines := ""
 	modelLines := ""
 	objectLines := "\tTable: NewTable(\"" + tableName + "\"),\n\n"
+	fieldCaseLines := ""
 	classLines := ""
 
 	className := convertCase(tableName)
@@ -221,7 +222,6 @@ func generateTable(db *sql.DB, tableName string) (string, error) {
 
 		fieldStructName := "f" + className + goName
 
-
 		tableLines += commentLine
 		tableLines += "\t" + goName + " " + fieldStructName + "\n"
 
@@ -231,6 +231,8 @@ func generateTable(db *sql.DB, tableName string) (string, error) {
 		objectLines += commentLine
 		objectLines += "\t" + goName + ": " + fieldStructName + "{"
 		objectLines += "New" + fieldClass + "(" + wrapQuote(tableName) + ", " + wrapQuote(fieldName) + ")},\n"
+
+		fieldCaseLines += "\tcase " + strconv.Quote(fieldName) + ": return t." + goName + "\n"
 
 		classLines += "type " + fieldStructName + " struct{ " + fieldClass + " }\n"
 
@@ -264,10 +266,10 @@ func generateTable(db *sql.DB, tableName string) (string, error) {
 	code += "}\n\n"
 
 	code += "func (t t" + className + ") GetFieldByName(name string) Field {\n"
-	code += "\tr := reflect.ValueOf(t)\n"
-	code += "\tf := reflect.Indirect(r).FieldByName(CamelName(name))\n"
-	code += "\tif !f.IsValid() {\n\t\treturn nil\n\t}\n"
-	code += "\tif field, ok := f.Interface().(Field); ok {\n\t\treturn field\n\t}\n\treturn nil"
+	code += "\tswitch (name) {\n"
+	code += fieldCaseLines
+	code += "\tdefault: return nil\n"
+	code += "\t}"
 	code += "}\n\n"
 
 	code += "func (t t" + className + ") GetFieldsSQL() string {\n"
