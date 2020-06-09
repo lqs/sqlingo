@@ -118,6 +118,18 @@ func commaExpressions(scope scope, expressions []Expression) (string, error) {
 	return sqlBuilder.String(), nil
 }
 
+func commaTables(scope scope, tables []Table) string {
+	var sqlBuilder strings.Builder
+	sqlBuilder.Grow(32)
+	for i, table := range tables {
+		if i > 0 {
+			sqlBuilder.WriteString(", ")
+		}
+		sqlBuilder.WriteString(table.GetSQL(scope))
+	}
+	return sqlBuilder.String()
+}
+
 func commaValues(scope scope, values []interface{}) (string, error) {
 	var sqlBuilder strings.Builder
 	for i, item := range values {

@@ -282,14 +282,7 @@ func (s selectStatus) GetSQL() (string, error) {
 	sb.WriteString(fieldsSql)
 
 	if len(s.scope.Tables) > 0 {
-		var values []interface{}
-		for _, table := range s.scope.Tables {
-			values = append(values, table)
-		}
-		fromSql, err := commaValues(s.scope, values)
-		if err != nil {
-			return "", err
-		}
+		fromSql := commaTables(s.scope, s.scope.Tables)
 		sb.WriteString(" FROM ")
 		sb.WriteString(fromSql)
 	}
