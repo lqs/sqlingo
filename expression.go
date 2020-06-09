@@ -60,6 +60,7 @@ type StringExpression interface {
 	Min() UnknownExpression
 	Max() UnknownExpression
 	Like(other interface{}) BooleanExpression
+	Contains(substring string) BooleanExpression
 }
 
 type UnknownExpression interface {
@@ -323,6 +324,10 @@ func (e expression) Max() UnknownExpression {
 
 func (e expression) Like(other interface{}) BooleanExpression {
 	return e.binaryOperation("LIKE", other, 11)
+}
+
+func (e expression) Contains(substring string) BooleanExpression {
+	return function("LOCATE", substring, e).GreaterThan(0)
 }
 
 func (e expression) binaryOperation(operator string, value interface{}, priority int) expression {
