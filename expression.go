@@ -160,6 +160,10 @@ func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority in
 		return
 	}
 	switch value.(type) {
+	case int:
+		sql = strconv.Itoa(value.(int))
+	case string:
+		sql = "\"" + escape(value.(string)) + "\""
 	case Expression:
 		sql, err = value.(Expression).GetSQL(scope)
 		priority = value.(Expression).getOperatorPriority()

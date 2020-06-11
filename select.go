@@ -157,16 +157,22 @@ func (s selectStatus) On(condition BooleanExpression) SelectWithJoinOn {
 }
 
 func getFields(fields []interface{}) (result []Field) {
+	result = make([]Field, 0, len(fields))
 	for _, field := range fields {
-		fieldCopy := field
-		fieldExpression := expression{builder: func(scope scope) (string, error) {
-			sql, _, err := getSQLFromWhatever(scope, fieldCopy)
-			if err != nil {
-				return "", err
-			}
-			return sql, nil
-		}}
-		result = append(result, fieldExpression)
+		switch field.(type) {
+		case Field:
+			result = append(result, field.(Field))
+		default:
+			fieldCopy := field
+			fieldExpression := expression{builder: func(scope scope) (string, error) {
+				sql, _, err := getSQLFromWhatever(scope, fieldCopy)
+				if err != nil {
+					return "", err
+				}
+				return sql, nil
+			}}
+			result = append(result, fieldExpression)
+		}
 	}
 	return
 }
