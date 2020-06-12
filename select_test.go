@@ -28,7 +28,7 @@ func (t table1) GetFullFieldsSQL() string {
 }
 
 func TestSelect(t *testing.T) {
-	db := database{}
+	db := newMockDatabase()
 	assertValue(t, db.Select(1), "(SELECT 1)")
 
 	table2 := NewTable("table1")

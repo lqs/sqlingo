@@ -6,7 +6,8 @@ import (
 	"errors"
 )
 
-func (m mockConn) Prepare(query string) (driver.Stmt, error) {
+func (m *mockConn) Prepare(query string) (driver.Stmt, error) {
+	m.lastSql = query
 	return &mockStmt{}, nil
 }
 
@@ -18,8 +19,18 @@ func (m mockConn) Begin() (driver.Tx, error) {
 	return nil, errors.New("tx not implemented in mock")
 }
 
+var sharedMockConn = &mockConn{}
+
 func (m mockDriver) Open(name string) (driver.Conn, error) {
-	return &mockConn{}, nil
+	return sharedMockConn, nil
+}
+
+func newMockDatabase() Database {
+	db, err := Open("sqlingo-mock", "dummy")
+	if err != nil {
+		panic(err)
+	}
+	return db
 }
 
 func init() {

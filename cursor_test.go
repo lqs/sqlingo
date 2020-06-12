@@ -9,7 +9,9 @@ import (
 
 type mockDriver struct{}
 
-type mockConn struct{}
+type mockConn struct {
+	lastSql string
+}
 
 type mockStmt struct{}
 
@@ -45,7 +47,7 @@ func (m mockStmt) Close() error {
 }
 
 func (m mockStmt) NumInput() int {
-	return -1
+	return 0
 }
 
 func (m mockStmt) Exec(args []driver.Value) (driver.Result, error) {
@@ -57,7 +59,7 @@ func (m mockStmt) Query(args []driver.Value) (driver.Rows, error) {
 }
 
 func TestCursor(t *testing.T) {
-	db, _ := Open("sqlingo-mock", "dummy")
+	db := newMockDatabase()
 	cursor, _ := db.Query("dummy sql")
 
 	var a int

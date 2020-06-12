@@ -138,9 +138,28 @@ func TestFunc(t *testing.T) {
 	assertError(t, ee.In(e, e, e))
 }
 
+func TestMisc(t *testing.T) {
+	assertValue(t, trueExpression(), "1")
+	assertValue(t, falseExpression(), "0")
+
+	assertValue(t, command("COMMAND", staticExpression("<arg>", 0)), "COMMAND <arg>")
+}
+
+func TestLogicalExpression(t *testing.T) {
+	a := expression{sql: "a", priority: 1}
+	b := expression{sql: "b", priority: 1}
+	c := expression{sql: "c", priority: 1}
+
+	assertValue(t, And(a, b, c), "a AND b AND c")
+	assertValue(t, Or(a, b, c), "a OR b OR c")
+
+	assertValue(t, And(), "1")
+	assertValue(t, Or(), "0")
+}
+
 func TestLogicalOptimizer(t *testing.T) {
-	trueValue := And()
-	falseValue := Or()
+	trueValue := trueExpression()
+	falseValue := falseExpression()
 
 	assertValue(t, trueValue.Or(trueValue), "1")
 	assertValue(t, trueValue.Or(falseValue), "1")
