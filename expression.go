@@ -116,6 +116,43 @@ func falseExpression() expression {
 	}
 }
 
+func Raw(sql string) UnknownExpression {
+	return expression{
+		sql:      sql,
+		priority: 99,
+	}
+}
+
+func And(expressions ...BooleanExpression) (result BooleanExpression) {
+	if len(expressions) == 0 {
+		result = trueExpression()
+		return
+	}
+	for _, condition := range expressions {
+		if result == nil {
+			result = condition
+		} else {
+			result = result.And(condition)
+		}
+	}
+	return
+}
+
+func Or(expressions ...BooleanExpression) (result BooleanExpression) {
+	if len(expressions) == 0 {
+		result = falseExpression()
+		return
+	}
+	for _, condition := range expressions {
+		if result == nil {
+			result = condition
+		} else {
+			result = result.Or(condition)
+		}
+	}
+	return
+}
+
 func (e expression) As(name string) Alias {
 	return expression{builder: func(scope scope) (string, error) {
 		expressionSql, err := e.GetSQL(scope)

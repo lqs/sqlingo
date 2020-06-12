@@ -269,7 +269,7 @@ func (s selectStatus) asDerivedTable(name string) Table {
 }
 
 func (s selectStatus) Exists() (exists bool, err error) {
-	_, err = s.scope.Database.Select(command(Raw("EXISTS"), s)).FetchFirst(&exists)
+	_, err = s.scope.Database.Select(command("EXISTS", s)).FetchFirst(&exists)
 	return
 }
 

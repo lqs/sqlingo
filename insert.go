@@ -2,6 +2,8 @@ package sqlingo
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"reflect"
 )
 
@@ -10,7 +12,7 @@ type insertStatus struct {
 	scope                           scope
 	fields                          []Field
 	values                          []interface{}
-	models                          []Model
+	models                          []interface{}
 	onDuplicateKeyUpdateAssignments []assignment
 }
 
@@ -23,6 +25,7 @@ type InsertWithTable interface {
 type InsertWithValues interface {
 	Values(values ...interface{}) InsertWithValues
 	OnDuplicateKeyUpdate() InsertWithOnDuplicateKeyUpdateBegin
+	GetSQL() (string, error)
 	Execute() (result sql.Result, err error)
 }
 
@@ -62,37 +65,34 @@ func (s insertStatus) Values(values ...interface{}) InsertWithValues {
 	return s
 }
 
-func (s *insertStatus) addModel(model interface{}) {
-	m0, ok := model.(Model)
-	if ok {
-		s.models = append(s.models, m0)
-		return
+func addModel(models *[]Model, model interface{}) error {
+	if model, ok := model.(Model); ok {
+		*models = append(*models, model)
+		return nil
 	}
 
 	value := reflect.ValueOf(model)
-	if value.Kind() == reflect.Ptr {
+	switch value.Kind() {
+	case reflect.Ptr:
 		value = reflect.Indirect(value)
-		s.addModel(value.Interface())
-	}
-	if value.Kind() == reflect.Slice {
+		return addModel(models, value.Interface())
+	case reflect.Slice, reflect.Array:
 		for i := 0; i < value.Len(); i++ {
 			elem := value.Index(i)
 			addr := elem.Addr()
 			inter := addr.Interface()
-			s.addModel(inter)
+			if err := addModel(models, inter); err != nil {
+				return err
+			}
 		}
-		return
+		return nil
+	default:
+		return fmt.Errorf("unknown model type (kind = %d)", value.Kind())
 	}
 }
 
 func (s insertStatus) Models(models ...interface{}) InsertWithModels {
-	if len(models) == 0 {
-		return s
-	}
-
-	for _, model := range models {
-		s.addModel(model)
-	}
+	s.models = models
 	return s
 }
 
@@ -113,8 +113,18 @@ func (s insertStatus) GetSQL() (string, error) {
 	var fields []Field
 	var values []interface{}
 	if len(s.models) > 0 {
-		fields = s.models[0].GetTable().GetFields()
+		models := make([]Model, 0, len(s.models))
 		for _, model := range s.models {
+			if err := addModel(&models, model); err != nil {
+				return "", err
+			}
+		}
+
+		fields = models[0].GetTable().GetFields()
+		for _, model := range models {
+			if model.GetTable().GetName() != s.scope.Tables[0].GetName() {
+				return "", errors.New("invalid table from model")
+			}
 			values = append(values, model.GetValues())
 		}
 	} else {
@@ -142,7 +152,6 @@ func (s insertStatus) GetSQL() (string, error) {
 	}
 
 	return sqlString, nil
-
 }
 
 func (s insertStatus) Execute() (result sql.Result, err error) {

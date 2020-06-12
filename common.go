@@ -33,58 +33,13 @@ func (a assignment) GetSQL(scope scope) (string, error) {
 	return fieldSql + " = " + value, nil
 }
 
-func Raw(sql string) UnknownExpression {
-	return expression{
-		sql:      sql,
-		priority: 99,
-	}
-}
-
-func And(expressions ...BooleanExpression) (result BooleanExpression) {
-	if len(expressions) == 0 {
-		result = trueExpression()
-		return
-	}
-	for _, condition := range expressions {
-		if result == nil {
-			result = condition
-		} else {
-			result = result.And(condition)
-		}
-	}
-	return
-}
-
-func Or(expressions ...BooleanExpression) (result BooleanExpression) {
-	if len(expressions) == 0 {
-		result = falseExpression()
-		return
-	}
-	for _, condition := range expressions {
-		if result == nil {
-			result = condition
-		} else {
-			result = result.Or(condition)
-		}
-	}
-	return
-}
-
-func command(args ...interface{}) expression {
+func command(name string, arg interface{}) expression {
 	return expression{builder: func(scope scope) (string, error) {
-		sql := ""
-		for i, item := range args {
-			if i > 0 {
-				sql += " "
-			}
-			itemSql, _, err := getSQLFromWhatever(scope, item)
-			if err != nil {
-				return "", err
-			}
-			sql += itemSql
-
+		sql, _, err := getSQLFromWhatever(scope, arg)
+		if err != nil {
+			return "", err
 		}
-		return sql, nil
+		return name + " " + sql, nil
 	}}
 }
 
