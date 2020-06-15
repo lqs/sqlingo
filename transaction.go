@@ -24,17 +24,25 @@ func (d *database) GetTx() *sql.Tx {
 }
 
 func (d *database) BeginTx(ctx context.Context, opts *sql.TxOptions, f func(tx Transaction) error) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	tx, err := d.db.BeginTx(ctx, opts)
 	if err != nil {
 		return err
 	}
+	isCommitted := false
+	defer func() {
+		if !isCommitted {
+			_ = tx.Rollback()
+		}
+	}()
 
 	if f != nil {
 		db := *d
 		db.tx = tx
 		err = f(&db)
 		if err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
@@ -43,5 +51,6 @@ func (d *database) BeginTx(ctx context.Context, opts *sql.TxOptions, f func(tx T
 	if err != nil {
 		return err
 	}
+	isCommitted = true
 	return nil
 }

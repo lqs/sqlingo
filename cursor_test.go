@@ -11,6 +11,7 @@ type mockDriver struct{}
 
 type mockConn struct {
 	lastSql string
+	mockTx  *mockTx
 }
 
 type mockStmt struct{}
