@@ -128,7 +128,11 @@ func (s insertStatus) GetSQL() (string, error) {
 			values = append(values, model.GetValues())
 		}
 	} else {
-		fields = s.fields
+		if len(s.fields) == 0 {
+			fields = s.scope.Tables[0].GetFields()
+		} else {
+			fields = s.fields
+		}
 		values = s.values
 	}
 
