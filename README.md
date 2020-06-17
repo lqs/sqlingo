@@ -7,6 +7,8 @@
 
 **sqlingo** is a SQL DSL (a.k.a. SQL Builder or ORM) library in Go. It generates code from the database and lets you write SQL queries in an elegant way.
 
+<img src="https://lqs-public-us-west.oss-us-west-1.aliyuncs.com/sqlingo/demo.gif" width="700" height="400">
+
 ## Features
 * Auto-generating DSL objects and model structs from the database so you don't need to manually keep things in sync
 * SQL DML (SELECT / INSERT / UPDATE / DELETE) with some advanced SQL query syntaxes
@@ -80,7 +82,7 @@ func main() {
     customer1 := &CustomerModel{name: "Customer One"}
     customer2 := &CustomerModel{name: "Customer Two"}
     _, err = db.InsertInto(Customer).
-        Values(customer1, customer2).
+        Models(customer1, customer2).
         Execute()
     
     // insert with on-duplicate-key-update
