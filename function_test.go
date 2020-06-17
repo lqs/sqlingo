@@ -21,4 +21,5 @@ func TestFunction(t *testing.T) {
 	assertValue(t, Count(a1), "COUNT(a1)")
 	assertValue(t, If(a1, 1, 2), "IF(a1, 1, 2)")
 	assertValue(t, Length(a1), "LENGTH(a1)")
+	assertValue(t, Sum(a1), "SUM(a1)")
 }

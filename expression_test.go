@@ -5,21 +5,30 @@ import (
 	"testing"
 )
 
+type CustomInt int
+type CustomBool bool
+type CustomFloat float32
+type CustomString string
+
 func TestExpression(t *testing.T) {
 	assertValue(t, nil, "NULL")
 
 	assertValue(t, false, "0")
 	assertValue(t, true, "1")
+	assertValue(t, CustomBool(false), "0")
+	assertValue(t, CustomBool(true), "1")
 
 	assertValue(t, int8(11), "11")
 	assertValue(t, int16(11111), "11111")
 	assertValue(t, int32(1111111111), "1111111111")
+	assertValue(t, CustomInt(1111111111), "1111111111")
 	assertValue(t, int(1111111111), "1111111111")
 	assertValue(t, int64(1111111111111111111), "1111111111111111111")
 
 	assertValue(t, int8(-11), "-11")
 	assertValue(t, int16(-11111), "-11111")
 	assertValue(t, int32(-1111111111), "-1111111111")
+	assertValue(t, CustomInt(-1111111111), "-1111111111")
 	assertValue(t, int(-1111111111), "-1111111111")
 	assertValue(t, int64(-1111111111111111111), "-1111111111111111111")
 
@@ -38,6 +47,7 @@ func TestExpression(t *testing.T) {
 	assertValue(t, "", "\"\"")
 	assertValue(t, "a' or 'a'='a", "\"a\\' or \\'a\\'=\\'a\"")
 	assertValue(t, "\n", "\"\\\n\"")
+	assertValue(t, CustomString("abc"), "\"abc\"")
 
 	x := 3
 	px := &x
@@ -136,6 +146,11 @@ func TestFunc(t *testing.T) {
 	assertError(t, ee.IsNull())
 	assertError(t, e.In(ee, ee, ee))
 	assertError(t, ee.In(e, e, e))
+
+	assertError(t, ee.Between(2, 4))
+	assertError(t, e.Between(2, ee))
+	assertError(t, e.Between(ee, 4))
+
 }
 
 func TestMisc(t *testing.T) {
@@ -143,6 +158,9 @@ func TestMisc(t *testing.T) {
 	assertValue(t, falseExpression(), "0")
 
 	assertValue(t, command("COMMAND", staticExpression("<arg>", 0)), "COMMAND <arg>")
+
+	assertValue(t, staticExpression("<expression>", 1).
+		prefixSuffixExpression("<prefix>", "<suffix>", 1), "<prefix><expression><suffix>")
 }
 
 func TestLogicalExpression(t *testing.T) {
@@ -170,4 +188,7 @@ func TestLogicalOptimizer(t *testing.T) {
 	assertValue(t, trueValue.And(falseValue), "1 AND 0")
 	assertValue(t, falseValue.And(trueValue), "0")
 	assertValue(t, falseValue.And(falseValue), "0")
+
+	assertValue(t, falseValue.Not(), "1")
+	assertValue(t, trueValue.Not(), "0")
 }

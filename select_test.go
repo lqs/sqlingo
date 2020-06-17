@@ -56,6 +56,23 @@ func TestSelect(t *testing.T) {
 	db.Select(1).WithContext(context.Background())
 
 	db.SelectFrom(Table1).GetSQL()
+
+}
+
+func TestCount(t *testing.T) {
+	db := newMockDatabase()
+
+	_, _ = db.SelectFrom(Test).Count()
+	assertLastSql(t, "SELECT COUNT(1) FROM `test`")
+
+	_, _ = db.SelectDistinct(Test.F1).From(Test).Count()
+	assertLastSql(t, "SELECT COUNT(DISTINCT `f1`) FROM `test`")
+
+	_, _ = db.Select(Test.F1).From(Test).GroupBy(Test.F2).Count()
+	assertLastSql(t, "SELECT COUNT(1) FROM (SELECT 1 FROM `test` GROUP BY `f2`) AS t")
+
+	_, _ = db.SelectDistinct(Test.F1).From(Test).GroupBy(Test.F2).Count()
+	assertLastSql(t, "SELECT COUNT(1) FROM (SELECT DISTINCT `f1` FROM `test` GROUP BY `f2`) AS t")
 }
 
 func TestLock(t *testing.T) {

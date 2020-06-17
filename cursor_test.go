@@ -34,8 +34,8 @@ func (m *mockRows) Next(dest []driver.Value) error {
 	}
 	m.count++
 	dest[0] = strconv.Itoa(m.count)
-	dest[1] = dest[0]
-	dest[2] = dest[0]
+	dest[1] = float32(m.count)
+	dest[2] = m.count
 	dest[3] = string(m.count % 2)       // '\x00' or '\x01'
 	dest[4] = strconv.Itoa(m.count % 2) // '0' or '1'
 	dest[5] = dest[0]
@@ -92,6 +92,13 @@ func TestCursor(t *testing.T) {
 		}
 		if err := cursor.Scan(); err != nil {
 			t.Errorf("%v", err)
+		}
+
+		var s string
+		var b ****bool
+		var p *string
+		if err := cursor.Scan(&s, &s, &s, &b, &s, &s, &p); err != nil {
+			t.Error(err)
 		}
 	}
 	if cursor.Next() {
