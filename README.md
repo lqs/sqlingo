@@ -7,7 +7,7 @@
 
 **sqlingo** is a SQL DSL (a.k.a. SQL Builder or ORM) library in Go. It generates code from the database and lets you write SQL queries in an elegant way.
 
-<img src="https://lqs-public-us-west.oss-us-west-1.aliyuncs.com/sqlingo/demo.gif" width="700" height="400">
+<img src="https://lqs-public-us-west.oss-us-west-1.aliyuncs.com/sqlingo/demo2.gif" width="443" height="297">
 
 ## Features
 * Auto-generating DSL objects and model structs from the database so you don't need to manually keep things in sync
