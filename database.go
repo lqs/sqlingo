@@ -18,13 +18,13 @@ type Database interface {
 	EnableCallerInfo(enableCallerInfo bool)
 	SetInterceptor(interceptor InterceptorFunc)
 
-	Select(fields ...interface{}) SelectWithFields
-	SelectDistinct(fields ...interface{}) SelectWithFields
-	SelectFrom(tables ...Table) SelectWithTables
-	InsertInto(table Table) InsertWithTable
-	ReplaceInto(table Table) InsertWithTable
-	Update(table Table) UpdateWithSet
-	DeleteFrom(table Table) DeleteWithTable
+	Select(fields ...interface{}) selectWithFields
+	SelectDistinct(fields ...interface{}) selectWithFields
+	SelectFrom(tables ...Table) selectWithTables
+	InsertInto(table Table) insertWithTable
+	ReplaceInto(table Table) insertWithTable
+	Update(table Table) updateWithSet
+	DeleteFrom(table Table) deleteWithTable
 }
 
 type txOrDB interface {

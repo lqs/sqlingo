@@ -4,11 +4,11 @@ import (
 	"database/sql"
 )
 
-type DeleteWithTable interface {
-	Where(conditions ...BooleanExpression) DeleteWithWhere
+type deleteWithTable interface {
+	Where(conditions ...BooleanExpression) deleteWithWhere
 }
 
-type DeleteWithWhere interface {
+type deleteWithWhere interface {
 	GetSQL() (string, error)
 	Execute() (result sql.Result, err error)
 }
@@ -18,11 +18,11 @@ type deleteStatus struct {
 	where BooleanExpression
 }
 
-func (d *database) DeleteFrom(table Table) DeleteWithTable {
+func (d *database) DeleteFrom(table Table) deleteWithTable {
 	return deleteStatus{scope: scope{Database: d, Tables: []Table{table}}}
 }
 
-func (s deleteStatus) Where(conditions ...BooleanExpression) DeleteWithWhere {
+func (s deleteStatus) Where(conditions ...BooleanExpression) deleteWithWhere {
 	s.where = And(conditions...)
 	return s
 }

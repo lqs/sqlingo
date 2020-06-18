@@ -15,29 +15,29 @@ type updateStatus struct {
 	limit       *int
 }
 
-func (d *database) Update(table Table) UpdateWithSet {
+func (d *database) Update(table Table) updateWithSet {
 	return updateStatus{scope: scope{Database: d, Tables: []Table{table}}}
 }
 
-type UpdateWithSet interface {
-	Set(Field Field, value interface{}) UpdateWithSet
-	Where(conditions ...BooleanExpression) UpdateWithWhere
-	OrderBy(orderBys ...OrderBy) UpdateWithOrder
-	Limit(limit int) UpdateWithLimit
+type updateWithSet interface {
+	Set(Field Field, value interface{}) updateWithSet
+	Where(conditions ...BooleanExpression) updateWithWhere
+	OrderBy(orderBys ...OrderBy) updateWithOrder
+	Limit(limit int) updateWithLimit
 }
 
-type UpdateWithWhere interface {
+type updateWithWhere interface {
 	toUpdateFinal
-	OrderBy(orderBys ...OrderBy) UpdateWithOrder
-	Limit(limit int) UpdateWithLimit
+	OrderBy(orderBys ...OrderBy) updateWithOrder
+	Limit(limit int) updateWithLimit
 }
 
-type UpdateWithOrder interface {
+type updateWithOrder interface {
 	toUpdateFinal
-	Limit(limit int) UpdateWithLimit
+	Limit(limit int) updateWithLimit
 }
 
-type UpdateWithLimit interface {
+type updateWithLimit interface {
 	toUpdateFinal
 }
 
@@ -46,7 +46,7 @@ type toUpdateFinal interface {
 	Execute() (sql.Result, error)
 }
 
-func (s updateStatus) Set(field Field, value interface{}) UpdateWithSet {
+func (s updateStatus) Set(field Field, value interface{}) updateWithSet {
 	s.assignments = append([]assignment{}, s.assignments...)
 	s.assignments = append(s.assignments, assignment{
 		field: field,
@@ -55,17 +55,17 @@ func (s updateStatus) Set(field Field, value interface{}) UpdateWithSet {
 	return s
 }
 
-func (s updateStatus) Where(conditions ...BooleanExpression) UpdateWithWhere {
+func (s updateStatus) Where(conditions ...BooleanExpression) updateWithWhere {
 	s.where = And(conditions...)
 	return s
 }
 
-func (s updateStatus) OrderBy(orderBys ...OrderBy) UpdateWithOrder {
+func (s updateStatus) OrderBy(orderBys ...OrderBy) updateWithOrder {
 	s.orderBys = orderBys
 	return s
 }
 
-func (s updateStatus) Limit(limit int) UpdateWithLimit {
+func (s updateStatus) Limit(limit int) updateWithLimit {
 	s.limit = &limit
 	return s
 }

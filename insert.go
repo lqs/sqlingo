@@ -16,50 +16,50 @@ type insertStatus struct {
 	onDuplicateKeyUpdateAssignments []assignment
 }
 
-type InsertWithTable interface {
-	Fields(fields ...Field) InsertWithValues
-	Values(values ...interface{}) InsertWithValues
-	Models(models ...interface{}) InsertWithModels
+type insertWithTable interface {
+	Fields(fields ...Field) insertWithValues
+	Values(values ...interface{}) insertWithValues
+	Models(models ...interface{}) insertWithModels
 }
 
-type InsertWithValues interface {
-	Values(values ...interface{}) InsertWithValues
-	OnDuplicateKeyUpdate() InsertWithOnDuplicateKeyUpdateBegin
+type insertWithValues interface {
+	Values(values ...interface{}) insertWithValues
+	OnDuplicateKeyUpdate() insertWithOnDuplicateKeyUpdateBegin
 	GetSQL() (string, error)
 	Execute() (result sql.Result, err error)
 }
 
-type InsertWithModels interface {
-	Models(models ...interface{}) InsertWithModels
-	OnDuplicateKeyUpdate() InsertWithOnDuplicateKeyUpdateBegin
+type insertWithModels interface {
+	Models(models ...interface{}) insertWithModels
+	OnDuplicateKeyUpdate() insertWithOnDuplicateKeyUpdateBegin
 	GetSQL() (string, error)
 	Execute() (result sql.Result, err error)
 }
 
-type InsertWithOnDuplicateKeyUpdateBegin interface {
-	Set(Field Field, value interface{}) InsertWithOnDuplicateKeyUpdate
+type insertWithOnDuplicateKeyUpdateBegin interface {
+	Set(Field Field, value interface{}) insertWithOnDuplicateKeyUpdate
 }
 
-type InsertWithOnDuplicateKeyUpdate interface {
-	Set(Field Field, value interface{}) InsertWithOnDuplicateKeyUpdate
+type insertWithOnDuplicateKeyUpdate interface {
+	Set(Field Field, value interface{}) insertWithOnDuplicateKeyUpdate
 	GetSQL() (string, error)
 	Execute() (result sql.Result, err error)
 }
 
-func (d *database) InsertInto(table Table) InsertWithTable {
+func (d *database) InsertInto(table Table) insertWithTable {
 	return insertStatus{method: "INSERT", scope: scope{Database: d, Tables: []Table{table}}}
 }
 
-func (d *database) ReplaceInto(table Table) InsertWithTable {
+func (d *database) ReplaceInto(table Table) insertWithTable {
 	return insertStatus{method: "REPLACE", scope: scope{Database: d, Tables: []Table{table}}}
 }
 
-func (s insertStatus) Fields(fields ...Field) InsertWithValues {
+func (s insertStatus) Fields(fields ...Field) insertWithValues {
 	s.fields = fields
 	return s
 }
 
-func (s insertStatus) Values(values ...interface{}) InsertWithValues {
+func (s insertStatus) Values(values ...interface{}) insertWithValues {
 	s.values = append([]interface{}{}, s.values...)
 	s.values = append(s.values, values)
 	return s
@@ -91,16 +91,16 @@ func addModel(models *[]Model, model interface{}) error {
 	}
 }
 
-func (s insertStatus) Models(models ...interface{}) InsertWithModels {
+func (s insertStatus) Models(models ...interface{}) insertWithModels {
 	s.models = models
 	return s
 }
 
-func (s insertStatus) OnDuplicateKeyUpdate() InsertWithOnDuplicateKeyUpdateBegin {
+func (s insertStatus) OnDuplicateKeyUpdate() insertWithOnDuplicateKeyUpdateBegin {
 	return s
 }
 
-func (s insertStatus) Set(field Field, value interface{}) InsertWithOnDuplicateKeyUpdate {
+func (s insertStatus) Set(field Field, value interface{}) insertWithOnDuplicateKeyUpdate {
 	s.onDuplicateKeyUpdateAssignments = append([]assignment{}, s.onDuplicateKeyUpdateAssignments...)
 	s.onDuplicateKeyUpdateAssignments = append(s.onDuplicateKeyUpdateAssignments, assignment{
 		field: field,

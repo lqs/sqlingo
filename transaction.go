@@ -11,12 +11,12 @@ type Transaction interface {
 	Query(sql string) (Cursor, error)
 	Execute(sql string) (sql.Result, error)
 
-	Select(fields ...interface{}) SelectWithFields
-	SelectDistinct(fields ...interface{}) SelectWithFields
-	SelectFrom(tables ...Table) SelectWithTables
-	InsertInto(table Table) InsertWithTable
-	Update(table Table) UpdateWithSet
-	DeleteFrom(table Table) DeleteWithTable
+	Select(fields ...interface{}) selectWithFields
+	SelectDistinct(fields ...interface{}) selectWithFields
+	SelectFrom(tables ...Table) selectWithTables
+	InsertInto(table Table) insertWithTable
+	Update(table Table) updateWithSet
+	DeleteFrom(table Table) deleteWithTable
 }
 
 func (d *database) GetTx() *sql.Tx {

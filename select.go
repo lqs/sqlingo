@@ -8,94 +8,94 @@ import (
 	"strings"
 )
 
-type SelectWithFields interface {
+type selectWithFields interface {
 	toSelectWithContext
 	toSelectFinal
-	From(tables ...Table) SelectWithTables
+	From(tables ...Table) selectWithTables
 }
 
-type SelectWithTables interface {
+type selectWithTables interface {
 	toSelectJoin
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
-	Where(conditions ...BooleanExpression) SelectWithWhere
-	GroupBy(expressions ...Expression) SelectWithGroupBy
-	OrderBy(orderBys ...OrderBy) SelectWithOrder
-	Limit(limit int) SelectWithLimit
+	Where(conditions ...BooleanExpression) selectWithWhere
+	GroupBy(expressions ...Expression) selectWithGroupBy
+	OrderBy(orderBys ...OrderBy) selectWithOrder
+	Limit(limit int) selectWithLimit
 }
 
 type toSelectJoin interface {
-	Join(table Table) SelectWithJoin
-	LeftJoin(table Table) SelectWithJoin
-	RightJoin(table Table) SelectWithJoin
+	Join(table Table) selectWithJoin
+	LeftJoin(table Table) selectWithJoin
+	RightJoin(table Table) selectWithJoin
 }
 
-type SelectWithJoin interface {
-	On(condition BooleanExpression) SelectWithJoinOn
+type selectWithJoin interface {
+	On(condition BooleanExpression) selectWithJoinOn
 }
 
-type SelectWithJoinOn interface {
+type selectWithJoinOn interface {
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
-	Where(conditions ...BooleanExpression) SelectWithWhere
-	GroupBy(expressions ...Expression) SelectWithGroupBy
-	OrderBy(orderBys ...OrderBy) SelectWithOrder
-	Limit(limit int) SelectWithLimit
+	Where(conditions ...BooleanExpression) selectWithWhere
+	GroupBy(expressions ...Expression) selectWithGroupBy
+	OrderBy(orderBys ...OrderBy) selectWithOrder
+	Limit(limit int) selectWithLimit
 }
 
-type SelectWithWhere interface {
+type selectWithWhere interface {
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
-	GroupBy(expressions ...Expression) SelectWithGroupBy
-	OrderBy(orderBys ...OrderBy) SelectWithOrder
-	Limit(limit int) SelectWithLimit
+	GroupBy(expressions ...Expression) selectWithGroupBy
+	OrderBy(orderBys ...OrderBy) selectWithOrder
+	Limit(limit int) selectWithLimit
 }
 
-type SelectWithGroupBy interface {
+type selectWithGroupBy interface {
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
-	Having(conditions ...BooleanExpression) SelectWithGroupByHaving
-	OrderBy(orderBys ...OrderBy) SelectWithOrder
-	Limit(limit int) SelectWithLimit
+	Having(conditions ...BooleanExpression) selectWithGroupByHaving
+	OrderBy(orderBys ...OrderBy) selectWithOrder
+	Limit(limit int) selectWithLimit
 }
 
-type SelectWithGroupByHaving interface {
+type selectWithGroupByHaving interface {
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
-	OrderBy(orderBys ...OrderBy) SelectWithOrder
+	OrderBy(orderBys ...OrderBy) selectWithOrder
 }
 
-type SelectWithOrder interface {
+type selectWithOrder interface {
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
-	Limit(limit int) SelectWithLimit
+	Limit(limit int) selectWithLimit
 }
 
-type SelectWithLimit interface {
+type selectWithLimit interface {
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
-	Offset(offset int) SelectWithOffset
+	Offset(offset int) selectWithOffset
 }
 
-type SelectWithOffset interface {
+type selectWithOffset interface {
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
 }
 
 type toSelectWithLock interface {
-	LockInShareMode() SelectWithLock
-	ForUpdate() SelectWithLock
+	LockInShareMode() selectWithLock
+	ForUpdate() selectWithLock
 }
 
-type SelectWithLock interface {
+type selectWithLock interface {
 	toSelectWithContext
 	toSelectFinal
 }
@@ -134,22 +134,22 @@ type selectStatus struct {
 	lock     string
 }
 
-func (s selectStatus) Join(table Table) SelectWithJoin {
+func (s selectStatus) Join(table Table) selectWithJoin {
 	s.scope.lastJoin = &join{previous: s.scope.lastJoin, table: table}
 	return s
 }
 
-func (s selectStatus) LeftJoin(table Table) SelectWithJoin {
+func (s selectStatus) LeftJoin(table Table) selectWithJoin {
 	s.scope.lastJoin = &join{previous: s.scope.lastJoin, prefix: "LEFT ", table: table}
 	return s
 }
 
-func (s selectStatus) RightJoin(table Table) SelectWithJoin {
+func (s selectStatus) RightJoin(table Table) selectWithJoin {
 	s.scope.lastJoin = &join{previous: s.scope.lastJoin, prefix: "RIGHT ", table: table}
 	return s
 }
 
-func (s selectStatus) On(condition BooleanExpression) SelectWithJoinOn {
+func (s selectStatus) On(condition BooleanExpression) selectWithJoinOn {
 	join := *s.scope.lastJoin
 	join.on = condition
 	s.scope.lastJoin = &join
@@ -177,49 +177,49 @@ func getFields(fields []interface{}) (result []Field) {
 	return
 }
 
-func (d *database) Select(fields ...interface{}) SelectWithFields {
+func (d *database) Select(fields ...interface{}) selectWithFields {
 	return selectStatus{scope: scope{Database: d}, fields: getFields(fields)}
 }
 
-func (s selectStatus) From(tables ...Table) SelectWithTables {
+func (s selectStatus) From(tables ...Table) selectWithTables {
 	s.scope.Tables = tables
 	return s
 }
 
-func (d *database) SelectFrom(tables ...Table) SelectWithTables {
+func (d *database) SelectFrom(tables ...Table) selectWithTables {
 	return selectStatus{scope: scope{Database: d, Tables: tables}}
 }
 
-func (d *database) SelectDistinct(fields ...interface{}) SelectWithFields {
+func (d *database) SelectDistinct(fields ...interface{}) selectWithFields {
 	return selectStatus{scope: scope{Database: d}, fields: getFields(fields), distinct: true}
 }
 
-func (s selectStatus) Where(conditions ...BooleanExpression) SelectWithWhere {
+func (s selectStatus) Where(conditions ...BooleanExpression) selectWithWhere {
 	s.where = And(conditions...)
 	return s
 }
 
-func (s selectStatus) GroupBy(expressions ...Expression) SelectWithGroupBy {
+func (s selectStatus) GroupBy(expressions ...Expression) selectWithGroupBy {
 	s.groupBys = expressions
 	return s
 }
 
-func (s selectStatus) Having(conditions ...BooleanExpression) SelectWithGroupByHaving {
+func (s selectStatus) Having(conditions ...BooleanExpression) selectWithGroupByHaving {
 	s.having = And(conditions...)
 	return s
 }
 
-func (s selectStatus) OrderBy(orderBys ...OrderBy) SelectWithOrder {
+func (s selectStatus) OrderBy(orderBys ...OrderBy) selectWithOrder {
 	s.orderBys = orderBys
 	return s
 }
 
-func (s selectStatus) Limit(limit int) SelectWithLimit {
+func (s selectStatus) Limit(limit int) selectWithLimit {
 	s.limit = &limit
 	return s
 }
 
-func (s selectStatus) Offset(offset int) SelectWithOffset {
+func (s selectStatus) Offset(offset int) selectWithOffset {
 	s.offset = offset
 	return s
 }
@@ -251,12 +251,12 @@ func (s selectStatus) Count() (count int, err error) {
 	return
 }
 
-func (s selectStatus) LockInShareMode() SelectWithLock {
+func (s selectStatus) LockInShareMode() selectWithLock {
 	s.lock = " LOCK IN SHARE MODE"
 	return s
 }
 
-func (s selectStatus) ForUpdate() SelectWithLock {
+func (s selectStatus) ForUpdate() selectWithLock {
 	s.lock = " FOR UPDATE"
 	return s
 }
