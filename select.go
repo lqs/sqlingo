@@ -165,7 +165,7 @@ func getFields(fields []interface{}) (result []Field) {
 		default:
 			fieldCopy := field
 			fieldExpression := expression{builder: func(scope scope) (string, error) {
-				sql, _, err := getSQLFromWhatever(scope, fieldCopy)
+				sql, _, err := getSQL(scope, fieldCopy)
 				if err != nil {
 					return "", err
 				}

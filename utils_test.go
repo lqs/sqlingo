@@ -4,7 +4,7 @@ import "testing"
 
 func assertValue(t *testing.T, value interface{}, expectedSql string) {
 	t.Helper()
-	if generatedSql, _, _ := getSQLFromWhatever(scope{}, value); generatedSql != expectedSql {
+	if generatedSql, _, _ := getSQL(scope{}, value); generatedSql != expectedSql {
 		t.Errorf("value [%v] generated [%s] expected [%s]", value, generatedSql, expectedSql)
 	}
 }
@@ -18,7 +18,7 @@ func assertLastSql(t *testing.T, expectedSql string) {
 
 func assertError(t *testing.T, value interface{}) {
 	t.Helper()
-	if generatedSql, _, err := getSQLFromWhatever(scope{}, value); err == nil {
+	if generatedSql, _, err := getSQL(scope{}, value); err == nil {
 		t.Errorf("value [%v] generated [%s] expected error", value, generatedSql)
 	}
 }

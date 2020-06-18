@@ -191,7 +191,7 @@ func escape(s string) string {
 	return string(buf[:n])
 }
 
-func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority int, err error) {
+func getSQL(scope scope, value interface{}) (sql string, priority int, err error) {
 	if value == nil {
 		sql = "NULL"
 		return
@@ -220,48 +220,55 @@ func getSQLFromWhatever(scope scope, value interface{}) (sql string, priority in
 		sql, err = value.(CaseExpression).End().GetSQL(scope)
 	default:
 		v := reflect.ValueOf(value)
-		if v.Kind() == reflect.Ptr {
-			for {
-				if v.IsNil() {
-					sql = "NULL"
-					return
-				}
-				v = v.Elem()
-				if v.Kind() != reflect.Ptr {
-					break
-				}
-			}
-			return getSQLFromWhatever(scope, v.Interface())
-		}
+		sql, priority, err = getSQLFromReflectValue(scope, v)
+	}
+	return
+}
 
-		switch v.Kind() {
-		case reflect.Bool:
-			if v.Bool() {
-				sql = "1"
-			} else {
-				sql = "0"
+func getSQLFromReflectValue(scope scope, v reflect.Value) (sql string, priority int, err error) {
+	if v.Kind() == reflect.Ptr {
+		// dereference pointers
+		for {
+			if v.IsNil() {
+				sql = "NULL"
+				return
 			}
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			sql = strconv.FormatInt(v.Int(), 10)
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			sql = strconv.FormatUint(v.Uint(), 10)
-		case reflect.Float32, reflect.Float64:
-			sql = strconv.FormatFloat(v.Float(), 'g', -1, 64)
-		case reflect.String:
-			sql = "\"" + escape(v.String()) + "\""
-		case reflect.Array, reflect.Slice:
-			length := v.Len()
-			values := make([]interface{}, length)
-			for i := 0; i < length; i++ {
-				values[i] = v.Index(i).Interface()
+			v = v.Elem()
+			if v.Kind() != reflect.Ptr {
+				break
 			}
-			sql, err = commaValues(scope, values)
-			if err == nil {
-				sql = "(" + sql + ")"
-			}
-		default:
-			err = fmt.Errorf("invalid type %s", v.Kind().String())
 		}
+		sql, priority, err = getSQL(scope, v.Interface())
+		return
+	}
+
+	switch v.Kind() {
+	case reflect.Bool:
+		if v.Bool() {
+			sql = "1"
+		} else {
+			sql = "0"
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		sql = strconv.FormatInt(v.Int(), 10)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		sql = strconv.FormatUint(v.Uint(), 10)
+	case reflect.Float32, reflect.Float64:
+		sql = strconv.FormatFloat(v.Float(), 'g', -1, 64)
+	case reflect.String:
+		sql = "\"" + escape(v.String()) + "\""
+	case reflect.Array, reflect.Slice:
+		length := v.Len()
+		values := make([]interface{}, length)
+		for i := 0; i < length; i++ {
+			values[i] = v.Index(i).Interface()
+		}
+		sql, err = commaValues(scope, values)
+		if err == nil {
+			sql = "(" + sql + ")"
+		}
+	default:
+		err = fmt.Errorf("invalid type %s", v.Kind().String())
 	}
 	return
 }
@@ -378,7 +385,7 @@ func (e expression) binaryOperation(operator string, value interface{}, priority
 			return "", err
 		}
 		leftPriority := e.priority
-		rightSql, rightPriority, err := getSQLFromWhatever(scope, value)
+		rightSql, rightPriority, err := getSQL(scope, value)
 		if err != nil {
 			return "", err
 		}
@@ -509,11 +516,11 @@ func (e expression) Between(min interface{}, max interface{}) BooleanExpression 
 		if err != nil {
 			return "", err
 		}
-		minSql, _, err := getSQLFromWhatever(scope, min)
+		minSql, _, err := getSQL(scope, min)
 		if err != nil {
 			return "", err
 		}
-		maxSql, _, err := getSQLFromWhatever(scope, max)
+		maxSql, _, err := getSQL(scope, max)
 		if err != nil {
 			return "", err
 		}

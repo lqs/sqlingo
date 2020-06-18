@@ -48,7 +48,7 @@ func (s caseStatus) End() Expression {
 	if s.head == nil {
 		return expression{
 			builder: func(scope scope) (string, error) {
-				elseSql, _, err := getSQLFromWhatever(scope, s.elseValue)
+				elseSql, _, err := getSQL(scope, s.elseValue)
 				return elseSql, err
 			},
 		}
@@ -64,14 +64,14 @@ func (s caseStatus) End() Expression {
 				if err != nil {
 					return "", err
 				}
-				thenSql, _, err := getSQLFromWhatever(scope, whenThen.then)
+				thenSql, _, err := getSQL(scope, whenThen.then)
 				if err != nil {
 					return "", err
 				}
 				sb.WriteString("WHEN " + whenSql + " THEN " + thenSql + " ")
 			}
 			if s.elseValue != nil {
-				elseSql, _, err := getSQLFromWhatever(scope, s.elseValue)
+				elseSql, _, err := getSQL(scope, s.elseValue)
 				if err != nil {
 					return "", err
 				}

@@ -22,7 +22,7 @@ type assignment struct {
 }
 
 func (a assignment) GetSQL(scope scope) (string, error) {
-	value, _, err := getSQLFromWhatever(scope, a.value)
+	value, _, err := getSQL(scope, a.value)
 	if err != nil {
 		return "", err
 	}
@@ -35,7 +35,7 @@ func (a assignment) GetSQL(scope scope) (string, error) {
 
 func command(name string, arg interface{}) expression {
 	return expression{builder: func(scope scope) (string, error) {
-		sql, _, err := getSQLFromWhatever(scope, arg)
+		sql, _, err := getSQL(scope, arg)
 		if err != nil {
 			return "", err
 		}
@@ -91,7 +91,7 @@ func commaValues(scope scope, values []interface{}) (string, error) {
 		if i > 0 {
 			sqlBuilder.WriteString(", ")
 		}
-		itemSql, _, err := getSQLFromWhatever(scope, item)
+		itemSql, _, err := getSQL(scope, item)
 		if err != nil {
 			return "", err
 		}
