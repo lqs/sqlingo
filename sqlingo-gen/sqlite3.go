@@ -6,9 +6,8 @@ type sqlite3SchemaFetcher struct {
 	db *sql.DB
 }
 
-func (s sqlite3SchemaFetcher) GetDatabaseName() (dbName *string, err error) {
-	dbName = new(string)
-	*dbName = "main"
+func (s sqlite3SchemaFetcher) GetDatabaseName() (dbName string, err error) {
+	dbName = "main"
 	return
 }
 
@@ -44,6 +43,10 @@ func (s sqlite3SchemaFetcher) GetFieldDescriptors(tableName string) (result []Fi
 		result = append(result, fieldDescriptor)
 	}
 	return
+}
+
+func (s sqlite3SchemaFetcher) QuoteIdentifier(identifier string) string {
+	return "\"" + identifier + "\""
 }
 
 func NewSQLite3SchemaFetcher(db *sql.DB) SchemaFetcher {

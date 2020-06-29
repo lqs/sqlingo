@@ -10,7 +10,7 @@ type mysqlSchemaFetcher struct {
 	db *sql.DB
 }
 
-func (m mysqlSchemaFetcher) GetDatabaseName() (dbName *string, err error) {
+func (m mysqlSchemaFetcher) GetDatabaseName() (dbName string, err error) {
 	row := m.db.QueryRow("SELECT DATABASE()")
 	err = row.Scan(&dbName)
 	return
@@ -86,6 +86,10 @@ func (m mysqlSchemaFetcher) GetFieldDescriptors(tableName string) ([]FieldDescri
 		})
 	}
 	return result, nil
+}
+
+func (m mysqlSchemaFetcher) QuoteIdentifier(identifier string) string {
+	return "`" + identifier + "`"
 }
 
 func NewMySQLSchemaFetcher(db *sql.DB) SchemaFetcher {
