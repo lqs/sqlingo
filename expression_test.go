@@ -43,11 +43,11 @@ func TestExpression(t *testing.T) {
 	assertValue(t, float64(2), "2")
 	assertValue(t, float64(-2), "-2")
 
-	assertValue(t, "abc", "\"abc\"")
-	assertValue(t, "", "\"\"")
-	assertValue(t, "a' or 'a'='a", "\"a\\' or \\'a\\'=\\'a\"")
-	assertValue(t, "\n", "\"\\\n\"")
-	assertValue(t, CustomString("abc"), "\"abc\"")
+	assertValue(t, "abc", "'abc'")
+	assertValue(t, "", "''")
+	assertValue(t, "a' or 'a'='a", "'a\\' or \\'a\\'=\\'a'")
+	assertValue(t, "\n", "'\\\n'")
+	assertValue(t, CustomString("abc"), "'abc'")
 
 	x := 3
 	px := &x
@@ -102,10 +102,10 @@ func TestFunc(t *testing.T) {
 	assertValue(t, e.NotIn([]int64{1}), "<> <> 1")
 	assertValue(t, e.NotIn([]int64{1, 2, 3}), "<> NOT IN (1, 2, 3)")
 
-	assertValue(t, e.Like("%A%"), "<> LIKE \"%A%\"")
-	assertValue(t, e.Contains("\n"), "LOCATE(\"\\\n\", <>) > 0")
+	assertValue(t, e.Like("%A%"), "<> LIKE '%A%'")
+	assertValue(t, e.Contains("\n"), "LOCATE('\\\n', <>) > 0")
 
-	assertValue(t, []interface{}{1, 2, 3, "d"}, "(1, 2, 3, \"d\")")
+	assertValue(t, []interface{}{1, 2, 3, "d"}, "(1, 2, 3, 'd')")
 
 	assertValue(t, e.IsNull(), "<> IS NULL")
 	assertValue(t, e.IsNotNull(), "<> IS NOT NULL")

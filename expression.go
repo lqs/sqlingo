@@ -174,10 +174,11 @@ func (e expression) GetSQL(scope scope) (string, error) {
 	return e.builder(scope)
 }
 
-func escape(s string) string {
+func quoteString(s string) string {
 	bytes := []byte(s)
-	n := 0
-	buf := make([]byte, len(s)*2)
+	buf := make([]byte, len(s)*2+2)
+	buf[0] = '\''
+	n := 1
 
 	for _, b := range bytes {
 		switch b {
@@ -188,6 +189,8 @@ func escape(s string) string {
 		buf[n] = b
 		n++
 	}
+	buf[n] = '\''
+	n++
 	return string(buf[:n])
 }
 
@@ -200,7 +203,7 @@ func getSQL(scope scope, value interface{}) (sql string, priority int, err error
 	case int:
 		sql = strconv.Itoa(value.(int))
 	case string:
-		sql = "\"" + escape(value.(string)) + "\""
+		sql = quoteString(value.(string))
 	case Expression:
 		sql, err = value.(Expression).GetSQL(scope)
 		priority = value.(Expression).getOperatorPriority()
@@ -256,7 +259,7 @@ func getSQLFromReflectValue(scope scope, v reflect.Value) (sql string, priority 
 	case reflect.Float32, reflect.Float64:
 		sql = strconv.FormatFloat(v.Float(), 'g', -1, 64)
 	case reflect.String:
-		sql = "\"" + escape(v.String()) + "\""
+		sql = quoteString(v.String())
 	case reflect.Array, reflect.Slice:
 		length := v.Len()
 		values := make([]interface{}, length)

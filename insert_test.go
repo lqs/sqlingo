@@ -64,7 +64,7 @@ func TestInsert(t *testing.T) {
 	if _, err := db.InsertInto(Test).Models(model, &model, []Model{model}).Execute(); err != nil {
 		t.Error(err)
 	}
-	assertLastSql(t, "INSERT INTO `test` (`f1`, `f2`) VALUES (1, \"test\"), (1, \"test\"), (1, \"test\")")
+	assertLastSql(t, "INSERT INTO `test` (`f1`, `f2`) VALUES (1, 'test'), (1, 'test'), (1, 'test')")
 
 	if _, err := db.InsertInto(Test).Models(model, &model, []interface{}{model, "invalid type"}).Execute(); err == nil {
 		t.Error("should get error here")
