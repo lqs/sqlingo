@@ -130,11 +130,6 @@ func commaOrderBys(scope scope, orderBys []OrderBy) (string, error) {
 	return sqlBuilder.String(), nil
 }
 
-func getSQLForName(name string) string {
-	// TODO: check reserved words
-	return "`" + name + "`"
-}
-
 func getCallerInfo(db database, retry bool) string {
 	if !db.enableCallerInfo {
 		return ""

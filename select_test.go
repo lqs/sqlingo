@@ -73,6 +73,9 @@ func TestCount(t *testing.T) {
 
 	_, _ = db.SelectDistinct(Test.F1).From(Test).GroupBy(Test.F2).Count()
 	assertLastSql(t, "SELECT COUNT(1) FROM (SELECT DISTINCT `f1` FROM `test` GROUP BY `f2`) AS t")
+
+	_, _ = db.Select(Test.F1).From(Test).Exists()
+	assertLastSql(t, "SELECT EXISTS (SELECT `f1` FROM `test`)")
 }
 
 func TestLock(t *testing.T) {

@@ -24,7 +24,14 @@ func (m *mockTx) Rollback() error {
 func TestTransaction(t *testing.T) {
 	db := newMockDatabase()
 
-	err := db.BeginTx(context.Background(), nil, func(tx Transaction) error {
+	err := db.BeginTx(nil, nil, func(tx Transaction) error {
+		if tx.GetDB() != db.GetDB() {
+			t.Error()
+		}
+		if tx.GetTx() == nil {
+			t.Error()
+		}
+
 		_, err := tx.Execute("<dummy>")
 		if err != nil {
 			t.Error(err)

@@ -11,8 +11,8 @@ type Table interface {
 
 type table struct {
 	Table
-	name string
-	sql  string
+	name        string
+	sqlDialects dialectArray
 }
 
 func (t table) GetName() string {
@@ -20,7 +20,7 @@ func (t table) GetName() string {
 }
 
 func (t table) GetSQL(scope scope) string {
-	return t.sql
+	return t.sqlDialects[scope.Database.dialect]
 }
 
 func (t table) getOperatorPriority() int {
@@ -28,7 +28,7 @@ func (t table) getOperatorPriority() int {
 }
 
 func NewTable(name string) Table {
-	return table{name: name, sql: getSQLForName(name)}
+	return table{name: name, sqlDialects: quoteIdentifier(name)}
 }
 
 type derivedTable struct {

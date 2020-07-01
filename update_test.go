@@ -1,6 +1,9 @@
 package sqlingo
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestUpdate(t *testing.T) {
 	db := newMockDatabase()
@@ -15,4 +18,36 @@ func TestUpdate(t *testing.T) {
 		Limit(2).
 		Execute()
 	assertLastSql(t, "UPDATE `table1` SET `field1` = 10 WHERE `field2` = 2 ORDER BY `field1` DESC LIMIT 2")
+
+	if _, err := db.Update(Table1).Limit(3).Execute(); err == nil {
+		t.Error("should get error here")
+	}
+
+	errExp := &expression{
+		builder: func(scope scope) (string, error) {
+			return "", errors.New("error")
+		},
+	}
+
+	if _, err := db.Update(Table1).
+		Set(field1, 10).
+		OrderBy(orderBy{by: errExp}).
+		Execute(); err == nil {
+		t.Error("should get error here")
+	}
+
+	if _, err := db.Update(Table1).
+		Set(field1, errExp).
+		Where(trueExpression()).
+		Execute(); err == nil {
+		t.Error("should get error here")
+	}
+
+	if _, err := db.Update(Table1).
+		Set(field1, 10).
+		Where(errExp).
+		Execute(); err == nil {
+		t.Error("should get error here")
+	}
+
 }

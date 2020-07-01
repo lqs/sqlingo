@@ -39,6 +39,12 @@ func TestCommon(t *testing.T) {
 	if sql != "<dummy 1>, <dummy 2>, <dummy 1>" {
 		t.Error()
 	}
+
+	_, err = commaExpressions(scope{}, []Expression{dummyExp1, dummyExp2, errExp})
+	if err == nil {
+		t.Error("should get error")
+	}
+
 	sql, err = commaAssignments(scope{}, []assignment{
 		{field: dummyExp1, value: dummyExp1},
 		{field: dummyExp1, value: dummyExp2},
@@ -53,6 +59,24 @@ func TestCommon(t *testing.T) {
 	_, err = commaAssignments(scope{}, []assignment{
 		{field: dummyExp1, value: dummyExp1},
 		{field: dummyExp1, value: errExp},
+	})
+	if err == nil {
+		t.Error("should get error")
+	}
+
+	sql, err = commaOrderBys(scope{}, []OrderBy{
+		orderBy{by: dummyExp1, desc: true},
+		orderBy{by: dummyExp2},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if sql != "<dummy 1> DESC, <dummy 2>" {
+		t.Error()
+	}
+
+	_, err = commaOrderBys(scope{}, []OrderBy{
+		orderBy{by: errExp},
 	})
 	if err == nil {
 		t.Error("should get error")

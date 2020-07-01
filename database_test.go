@@ -1,8 +1,11 @@
 package sqlingo
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
+	"testing"
 )
 
 func (m *mockConn) Prepare(query string) (driver.Stmt, error) {
@@ -36,4 +39,38 @@ func newMockDatabase() Database {
 
 func init() {
 	sql.Register("sqlingo-mock", &mockDriver{})
+}
+
+func TestDatabase(t *testing.T) {
+	db := newMockDatabase()
+	if db.GetDB() == nil {
+		t.Error()
+	}
+
+	interceptorExecuted := false
+	loggerExecuted := false
+	db.SetInterceptor(func(ctx context.Context, sql string, invoker InvokerFunc) error {
+		if sql != "SELECT 1" {
+			t.Error()
+		}
+		interceptorExecuted = true
+		return invoker(ctx, sql)
+	})
+	db.SetLogger(func(sql string, durationNano int64) {
+		if sql != "SELECT 1" {
+			t.Error()
+		}
+		loggerExecuted = true
+	})
+	_, _ = db.Query("SELECT 1")
+	if !interceptorExecuted || !loggerExecuted {
+		t.Error()
+	}
+
+	db.SetInterceptor(func(ctx context.Context, sql string, invoker InvokerFunc) error {
+		return errors.New("error")
+	})
+	if _, err := db.Query("SELECT 1"); err == nil {
+		t.Error("should get error here")
+	}
 }
