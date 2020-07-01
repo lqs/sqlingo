@@ -36,7 +36,7 @@ type database struct {
 	db               *sql.DB
 	tx               *sql.Tx
 	logger           func(sql string, durationNano int64)
-	dialect          string
+	dialect          dialect
 	retryPolicy      func(error) bool
 	enableCallerInfo bool
 	interceptor      InterceptorFunc
@@ -67,7 +67,7 @@ func Open(driverName string, dataSourceName string) (db Database, err error) {
 		}
 	}
 	db = &database{
-		dialect: driverName,
+		dialect: getDialectFromDriverName(driverName),
 		db:      sqlDB,
 	}
 	return

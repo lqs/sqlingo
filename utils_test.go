@@ -2,9 +2,11 @@ package sqlingo
 
 import "testing"
 
+var dummyMySQLScope = scope{Database: &database{dialect: dialectMySQL}}
+
 func assertValue(t *testing.T, value interface{}, expectedSql string) {
 	t.Helper()
-	if generatedSql, _, _ := getSQL(scope{}, value); generatedSql != expectedSql {
+	if generatedSql, _, _ := getSQL(dummyMySQLScope, value); generatedSql != expectedSql {
 		t.Errorf("value [%v] generated [%s] expected [%s]", value, generatedSql, expectedSql)
 	}
 }
@@ -18,7 +20,7 @@ func assertLastSql(t *testing.T, expectedSql string) {
 
 func assertError(t *testing.T, value interface{}) {
 	t.Helper()
-	if generatedSql, _, err := getSQL(scope{}, value); err == nil {
+	if generatedSql, _, err := getSQL(dummyMySQLScope, value); err == nil {
 		t.Errorf("value [%v] generated [%s] expected error", value, generatedSql)
 	}
 }

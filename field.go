@@ -19,14 +19,24 @@ type StringField interface {
 }
 
 func newFieldExpression(tableName string, fieldName string) expression {
-	shortFieldNameSql := getSQLForName(fieldName)
-	fullFieldNameSql := getSQLForName(tableName) + "." + shortFieldNameSql
+	tableNameSqlArray := quoteIdentifier(tableName)
+	fieldNameSqlArray := quoteIdentifier(fieldName)
+
+	var fullFieldNameSqlArray dialectArray
+	for dialect := dialect(0); dialect < dialectCount; dialect++ {
+		fullFieldNameSqlArray[dialect] = tableNameSqlArray[dialect] + "." + fieldNameSqlArray[dialect]
+	}
+
 	return expression{
 		builder: func(scope scope) (string, error) {
-			if len(scope.Tables) != 1 || scope.lastJoin != nil || scope.Tables[0].GetName() != tableName {
-				return fullFieldNameSql, nil
+			dialect := dialectUnknown
+			if scope.Database != nil {
+				dialect = scope.Database.dialect
 			}
-			return shortFieldNameSql, nil
+			if len(scope.Tables) != 1 || scope.lastJoin != nil || scope.Tables[0].GetName() != tableName {
+				return fullFieldNameSqlArray[dialect], nil
+			}
+			return fieldNameSqlArray[dialect], nil
 		},
 	}
 }

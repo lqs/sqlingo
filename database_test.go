@@ -30,6 +30,7 @@ func newMockDatabase() Database {
 	if err != nil {
 		panic(err)
 	}
+	db.(*database).dialect = dialectMySQL
 	return db
 }
 

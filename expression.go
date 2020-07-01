@@ -174,6 +174,20 @@ func (e expression) GetSQL(scope scope) (string, error) {
 	return e.builder(scope)
 }
 
+func quoteIdentifier(identifier string) (result dialectArray) {
+	for dialect := dialect(0); dialect < dialectCount; dialect++ {
+		switch dialect {
+		case dialectMySQL:
+			result[dialect] = "`" + identifier + "`"
+		case dialectMSSQL:
+			result[dialect] = "[" + identifier + "]"
+		default:
+			result[dialect] = "\"" + identifier + "\""
+		}
+	}
+	return
+}
+
 func quoteString(s string) string {
 	bytes := []byte(s)
 	buf := make([]byte, len(s)*2+2)
