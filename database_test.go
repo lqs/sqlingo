@@ -13,7 +13,7 @@ func (m *mockConn) Prepare(query string) (driver.Stmt, error) {
 		return nil, m.prepareError
 	}
 	m.lastSql = query
-	return &mockStmt{}, nil
+	return &mockStmt{columnCount: m.columnCount}, nil
 }
 
 func (m mockConn) Close() error {
@@ -28,7 +28,7 @@ func (m *mockConn) Begin() (driver.Tx, error) {
 	return m.mockTx, nil
 }
 
-var sharedMockConn = &mockConn{}
+var sharedMockConn = &mockConn{columnCount: 7}
 
 func (m mockDriver) Open(name string) (driver.Conn, error) {
 	return sharedMockConn, nil

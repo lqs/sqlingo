@@ -14,16 +14,20 @@ type mockConn struct {
 	mockTx       *mockTx
 	beginTxError error
 	prepareError error
+	columnCount  int
 }
 
-type mockStmt struct{}
+type mockStmt struct {
+	columnCount int
+}
 
 type mockRows struct {
-	count int
+	columnCount    int
+	cursorPosition int
 }
 
 func (m mockRows) Columns() []string {
-	return []string{"a", "b", "c", "d", "e", "f", "g"}
+	return []string{"a", "b", "c", "d", "e", "f", "g"}[:m.columnCount]
 }
 
 func (m mockRows) Close() error {
@@ -31,17 +35,28 @@ func (m mockRows) Close() error {
 }
 
 func (m *mockRows) Next(dest []driver.Value) error {
-	if m.count >= 10 {
+	if m.cursorPosition >= 10 {
 		return io.EOF
 	}
-	m.count++
-	dest[0] = strconv.Itoa(m.count)
-	dest[1] = float32(m.count)
-	dest[2] = m.count
-	dest[3] = string(m.count % 2)       // '\x00' or '\x01'
-	dest[4] = strconv.Itoa(m.count % 2) // '0' or '1'
-	dest[5] = dest[0]
-	dest[6] = nil
+	m.cursorPosition++
+	for i := 0; i < m.columnCount; i++ {
+		switch i {
+		case 0:
+			dest[i] = strconv.Itoa(m.cursorPosition)
+		case 1:
+			dest[i] = float32(m.cursorPosition)
+		case 2:
+			dest[i] = m.cursorPosition
+		case 3:
+			dest[i] = string(m.cursorPosition % 2) // '\x00' or '\x01'
+		case 4:
+			dest[i] = strconv.Itoa(m.cursorPosition % 2) // '0' or '1'
+		case 5:
+			dest[i] = dest[0]
+		case 6:
+			dest[i] = nil
+		}
+	}
 	return nil
 }
 
@@ -58,7 +73,7 @@ func (m mockStmt) Exec(args []driver.Value) (driver.Result, error) {
 }
 
 func (m mockStmt) Query(args []driver.Value) (driver.Rows, error) {
-	return &mockRows{}, nil
+	return &mockRows{columnCount: m.columnCount}, nil
 }
 
 func TestCursor(t *testing.T) {

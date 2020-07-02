@@ -78,6 +78,42 @@ func TestCount(t *testing.T) {
 	assertLastSql(t, "SELECT EXISTS (SELECT `f1` FROM `test`)")
 }
 
+func TestFetchAll(t *testing.T) {
+	db := newMockDatabase()
+
+	sharedMockConn.columnCount = 2
+	defer func() {
+		sharedMockConn.columnCount = 7
+	}()
+
+	// fetch all as slices
+	var f1s []string
+	var f2s []int
+	if _, err := db.Select(field1).From(Table1).FetchAll(&f1s, &f2s); err != nil {
+		t.Error(err)
+	}
+	if len(f1s) != 10 || len(f2s) != 10 {
+		t.Error(f1s, f2s)
+	}
+
+	// fetch all as map
+	var m map[string]int
+	if _, err := db.Select(field1).From(Table1).FetchAll(&m); err != nil {
+		t.Error(err)
+	}
+
+	// fetch all as multiple maps is illegal
+	if _, err := db.Select(field1).From(Table1).FetchAll(&m, &m); err == nil {
+		t.Error("should get error here")
+	}
+
+	// fetch all as unsupported type
+	var unsupported int
+	if _, err := db.Select(field1).From(Table1).FetchAll(&unsupported); err == nil {
+		t.Error("should get error here")
+	}
+}
+
 func TestLock(t *testing.T) {
 	db := database{}
 	table1 := NewTable("table1")
