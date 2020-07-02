@@ -10,8 +10,10 @@ import (
 type mockDriver struct{}
 
 type mockConn struct {
-	lastSql string
-	mockTx  *mockTx
+	lastSql      string
+	mockTx       *mockTx
+	beginTxError error
+	prepareError error
 }
 
 type mockStmt struct{}

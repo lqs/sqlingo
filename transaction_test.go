@@ -9,9 +9,13 @@ import (
 type mockTx struct {
 	isCommitted  bool
 	isRolledBack bool
+	commitError  error
 }
 
 func (m *mockTx) Commit() error {
+	if m.commitError != nil {
+		return m.commitError
+	}
 	m.isCommitted = true
 	return nil
 }
@@ -61,4 +65,20 @@ func TestTransaction(t *testing.T) {
 		t.Error()
 	}
 
+	sharedMockConn.beginTxError = errors.New("error")
+	err = db.BeginTx(context.Background(), nil, func(tx Transaction) error {
+		return nil
+	})
+	if err == nil {
+		t.Error("should get error here")
+	}
+	sharedMockConn.beginTxError = nil
+
+	err = db.BeginTx(context.Background(), nil, func(tx Transaction) error {
+		sharedMockConn.mockTx.commitError = errors.New("error")
+		return nil
+	})
+	if err == nil {
+		t.Error("should get error here")
+	}
 }

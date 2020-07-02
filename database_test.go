@@ -9,6 +9,9 @@ import (
 )
 
 func (m *mockConn) Prepare(query string) (driver.Stmt, error) {
+	if m.prepareError != nil {
+		return nil, m.prepareError
+	}
 	m.lastSql = query
 	return &mockStmt{}, nil
 }
@@ -18,6 +21,9 @@ func (m mockConn) Close() error {
 }
 
 func (m *mockConn) Begin() (driver.Tx, error) {
+	if m.beginTxError != nil {
+		return nil, m.beginTxError
+	}
 	m.mockTx = &mockTx{}
 	return m.mockTx, nil
 }
@@ -42,29 +48,38 @@ func init() {
 }
 
 func TestDatabase(t *testing.T) {
+	if _, err := Open("unknowndb", "unknown"); err == nil {
+		t.Error()
+	}
+
 	db := newMockDatabase()
 	if db.GetDB() == nil {
 		t.Error()
 	}
 
-	interceptorExecuted := false
-	loggerExecuted := false
+	interceptorExecutedCount := 0
+	loggerExecutedCount := 0
 	db.SetInterceptor(func(ctx context.Context, sql string, invoker InvokerFunc) error {
 		if sql != "SELECT 1" {
 			t.Error()
 		}
-		interceptorExecuted = true
+		interceptorExecutedCount++
 		return invoker(ctx, sql)
 	})
 	db.SetLogger(func(sql string, durationNano int64) {
 		if sql != "SELECT 1" {
-			t.Error()
+			t.Error(sql)
 		}
-		loggerExecuted = true
+		loggerExecutedCount++
 	})
 	_, _ = db.Query("SELECT 1")
-	if !interceptorExecuted || !loggerExecuted {
-		t.Error()
+	if interceptorExecutedCount != 1 || loggerExecutedCount != 1 {
+		t.Error(interceptorExecutedCount, loggerExecutedCount)
+	}
+
+	_, _ = db.Execute("SELECT 1")
+	if loggerExecutedCount != 2 {
+		t.Error(loggerExecutedCount)
 	}
 
 	db.SetInterceptor(func(ctx context.Context, sql string, invoker InvokerFunc) error {
@@ -73,4 +88,22 @@ func TestDatabase(t *testing.T) {
 	if _, err := db.Query("SELECT 1"); err == nil {
 		t.Error("should get error here")
 	}
+}
+
+func TestDatabaseRetry(t *testing.T) {
+	db := newMockDatabase()
+	retryCount := 0
+	db.SetRetryPolicy(func(err error) bool {
+		retryCount++
+		return retryCount < 10
+	})
+
+	sharedMockConn.prepareError = errors.New("error")
+	if _, err := db.Query("SELECT 1"); err == nil {
+		t.Error("should get error here")
+	}
+	if retryCount != 10 {
+		t.Error(retryCount)
+	}
+	sharedMockConn.prepareError = nil
 }
