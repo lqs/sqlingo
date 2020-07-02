@@ -90,32 +90,11 @@ func (d database) Query(sqlString string) (Cursor, error) {
 }
 
 func (d database) QueryContext(ctx context.Context, sqlString string) (Cursor, error) {
-	startTime := time.Now().UnixNano()
 	isRetry := false
 	for {
-		var rows *sql.Rows
-		invoker := func(ctx context.Context, sql string) (err error) {
-			rows, err = d.getTxOrDB().QueryContext(ctx, sql)
-			return
-		}
-
 		sqlStringWithCallerInfo := getCallerInfo(d, isRetry) + sqlString
 
-		interceptor := d.interceptor
-		var err error
-		if interceptor == nil {
-			err = invoker(ctx, sqlStringWithCallerInfo)
-		} else {
-			err = interceptor(ctx, sqlStringWithCallerInfo, invoker)
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		endTime := time.Now().UnixNano()
-		if d.logger != nil {
-			d.logger(sqlStringWithCallerInfo, endTime-startTime)
-		}
+		rows, err := d.queryContextOnce(ctx, sqlStringWithCallerInfo)
 		if err != nil {
 			isRetry = d.tx == nil && d.retryPolicy != nil && d.retryPolicy(err)
 			if isRetry {
@@ -125,6 +104,35 @@ func (d database) QueryContext(ctx context.Context, sqlString string) (Cursor, e
 		}
 		return cursor{rows: rows}, nil
 	}
+}
+
+func (d database) queryContextOnce(ctx context.Context, sqlStringWithCallerInfo string) (*sql.Rows, error) {
+	startTime := time.Now().UnixNano()
+	defer func() {
+		endTime := time.Now().UnixNano()
+		if d.logger != nil {
+			d.logger(sqlStringWithCallerInfo, endTime-startTime)
+		}
+	}()
+
+	interceptor := d.interceptor
+	var rows *sql.Rows
+	invoker := func(ctx context.Context, sql string) (err error) {
+		rows, err = d.getTxOrDB().QueryContext(ctx, sql)
+		return
+	}
+
+	var err error
+	if interceptor == nil {
+		err = invoker(ctx, sqlStringWithCallerInfo)
+	} else {
+		err = interceptor(ctx, sqlStringWithCallerInfo, invoker)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func (d database) Execute(sql string) (sql.Result, error) {
