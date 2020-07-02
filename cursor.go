@@ -30,7 +30,6 @@ func preparePointers(val reflect.Value, scans *[]interface{}) error {
 		reflect.Float32, reflect.Float64,
 		reflect.String:
 		*scans = append(*scans, val.Addr().Interface())
-	case reflect.Slice:
 	case reflect.Struct:
 		for j := 0; j < val.NumField(); j++ {
 			field := val.Field(j)
