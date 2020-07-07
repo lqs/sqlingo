@@ -11,14 +11,14 @@ import (
 	"unicode"
 )
 
-type SchemaFetcher interface {
+type schemaFetcher interface {
 	GetDatabaseName() (dbName string, err error)
 	GetTableNames() (tableNames []string, err error)
-	GetFieldDescriptors(tableName string) ([]FieldDescriptor, error)
+	GetFieldDescriptors(tableName string) ([]fieldDescriptor, error)
 	QuoteIdentifier(identifier string) string
 }
 
-type FieldDescriptor struct {
+type fieldDescriptor struct {
 	Name      string
 	Type      string
 	Size      int
@@ -44,7 +44,7 @@ func convertCase(s string) (result string) {
 	return
 }
 
-func getType(fieldDescriptor FieldDescriptor) (goType string, fieldClass string, err error) {
+func getType(fieldDescriptor fieldDescriptor) (goType string, fieldClass string, err error) {
 	switch strings.ToLower(fieldDescriptor.Type) {
 	case "tinyint":
 		goType = "int8"
@@ -89,14 +89,14 @@ func getType(fieldDescriptor FieldDescriptor) (goType string, fieldClass string,
 	return
 }
 
-func getSchemaFetcherFactory(driverName string) func(db *sql.DB) SchemaFetcher {
+func getSchemaFetcherFactory(driverName string) func(db *sql.DB) schemaFetcher {
 	switch driverName {
 	case "mysql":
-		return NewMySQLSchemaFetcher
+		return newMySQLSchemaFetcher
 	case "sqlite3":
-		return NewSQLite3SchemaFetcher
+		return newSQLite3SchemaFetcher
 	case "postgres":
-		return NewPostgresSchemaFetcher
+		return newPostgresSchemaFetcher
 	default:
 		_, _ = fmt.Fprintln(os.Stderr, "unsupported driver "+driverName)
 		os.Exit(2)
@@ -152,7 +152,7 @@ func generate(driverName string, dataSourceName string, tableNames []string) (st
 }
 
 func generateTableMap(tableNames []string) string {
-	var tablePairs string = ""
+	tablePairs := ""
 	for _, tableName := range tableNames {
 		tablePairs += "\t" + strconv.Quote(tableName) + ": " + convertCase(tableName) + ",\n"
 	}
@@ -161,7 +161,7 @@ func generateTableMap(tableNames []string) string {
 	return tableMapCode
 }
 
-func generateTable(schemaFetcher SchemaFetcher, tableName string) (string, error) {
+func generateTable(schemaFetcher schemaFetcher, tableName string) (string, error) {
 	fieldDescriptors, err := schemaFetcher.GetFieldDescriptors(tableName)
 	if err != nil {
 		return "", err

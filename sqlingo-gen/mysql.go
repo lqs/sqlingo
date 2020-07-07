@@ -34,13 +34,13 @@ func (m mysqlSchemaFetcher) GetTableNames() (tableNames []string, err error) {
 	return
 }
 
-func (m mysqlSchemaFetcher) GetFieldDescriptors(tableName string) ([]FieldDescriptor, error) {
+func (m mysqlSchemaFetcher) GetFieldDescriptors(tableName string) ([]fieldDescriptor, error) {
 	rows, err := m.db.Query("SHOW FULL COLUMNS FROM `" + tableName + "`")
 	if err != nil {
 		return nil, err
 	}
 
-	var result []FieldDescriptor
+	var result []fieldDescriptor
 	for rows.Next() {
 		columns, err := rows.Columns()
 		if err != nil {
@@ -76,7 +76,7 @@ func (m mysqlSchemaFetcher) GetFieldDescriptors(tableName string) ([]FieldDescri
 		}
 		unsigned := submatches[5] == "unsigned"
 
-		result = append(result, FieldDescriptor{
+		result = append(result, fieldDescriptor{
 			Name:      row["Field"],
 			Type:      fieldType,
 			Size:      fieldSize,
@@ -92,6 +92,6 @@ func (m mysqlSchemaFetcher) QuoteIdentifier(identifier string) string {
 	return "`" + identifier + "`"
 }
 
-func NewMySQLSchemaFetcher(db *sql.DB) SchemaFetcher {
+func newMySQLSchemaFetcher(db *sql.DB) schemaFetcher {
 	return mysqlSchemaFetcher{db: db}
 }
