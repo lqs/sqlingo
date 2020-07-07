@@ -6,15 +6,23 @@ import (
 	"strconv"
 )
 
+// Expression is the interface of a SQL expression.
 type Expression interface {
+	// get the SQL string
 	GetSQL(scope scope) (string, error)
 	getOperatorPriority() int
 
+	// <> operator
 	NotEquals(other interface{}) BooleanExpression
+	// == operator
 	Equals(other interface{}) BooleanExpression
+	// < operator
 	LessThan(other interface{}) BooleanExpression
+	// <= operator
 	LessThanOrEquals(other interface{}) BooleanExpression
+	// > operator
 	GreaterThan(other interface{}) BooleanExpression
+	// >= operator
 	GreaterThanOrEquals(other interface{}) BooleanExpression
 
 	IsNull() BooleanExpression
@@ -29,10 +37,12 @@ type Expression interface {
 	IfNull(altValue interface{}) Expression
 }
 
+// Alias is the interface of an table/column alias.
 type Alias interface {
 	GetSQL(scope scope) (string, error)
 }
 
+// BooleanExpression is the interface of a SQL expression with boolean value.
 type BooleanExpression interface {
 	Expression
 	And(other interface{}) BooleanExpression
@@ -40,6 +50,7 @@ type BooleanExpression interface {
 	Not() BooleanExpression
 }
 
+// NumberExpression is the interface of a SQL expression with number value.
 type NumberExpression interface {
 	Expression
 	Add(other interface{}) NumberExpression
@@ -55,6 +66,7 @@ type NumberExpression interface {
 	Max() UnknownExpression
 }
 
+// StringExpression is the interface of a SQL expression with string value.
 type StringExpression interface {
 	Expression
 	Min() UnknownExpression
@@ -63,6 +75,7 @@ type StringExpression interface {
 	Contains(substring string) BooleanExpression
 }
 
+// UnknownExpression is the interface of a SQL expression with unknown value.
 type UnknownExpression interface {
 	Expression
 	And(other interface{}) BooleanExpression
@@ -116,6 +129,7 @@ func falseExpression() expression {
 	}
 }
 
+// Raw create a raw SQL statement
 func Raw(sql string) UnknownExpression {
 	return expression{
 		sql:      sql,
@@ -123,6 +137,7 @@ func Raw(sql string) UnknownExpression {
 	}
 }
 
+// And creates an expression with AND operator.
 func And(expressions ...BooleanExpression) (result BooleanExpression) {
 	if len(expressions) == 0 {
 		result = trueExpression()
@@ -138,6 +153,7 @@ func And(expressions ...BooleanExpression) (result BooleanExpression) {
 	return
 }
 
+// Or creates an expression with OR operator.
 func Or(expressions ...BooleanExpression) (result BooleanExpression) {
 	if len(expressions) == 0 {
 		result = falseExpression()
@@ -490,20 +506,20 @@ func (e expression) NotIn(values ...interface{}) BooleanExpression {
 	return expression{builder: builder, priority: 11}
 }
 
-type JoinerFunc = func(exprSql, valuesSql string) string
-type BooleanFunc = func(other interface{}) BooleanExpression
-type BuilderFunc = func(scope scope) (string, error)
+type joinerFunc = func(exprSql, valuesSql string) string
+type booleanFunc = func(other interface{}) BooleanExpression
+type builderFunc = func(scope scope) (string, error)
 
-func (e expression) getBuilder(single BooleanFunc, joiner JoinerFunc, values ...interface{}) BuilderFunc {
+func (e expression) getBuilder(single booleanFunc, joiner joinerFunc, values ...interface{}) builderFunc {
 	return func(scope scope) (string, error) {
 		var valuesSql string
 		var err error
 
 		if len(values) == 1 {
 			value := values[0]
-			if select_, ok := value.(toSelectFinal); ok {
+			if selectStatus, ok := value.(toSelectFinal); ok {
 				// IN subquery
-				valuesSql, err = select_.GetSQL()
+				valuesSql, err = selectStatus.GetSQL()
 				if err != nil {
 					return "", err
 				}

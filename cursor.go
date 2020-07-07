@@ -7,6 +7,7 @@ import (
 	"strconv"
 )
 
+// Cursor is the interface of a row cursor.
 type Cursor interface {
 	Next() bool
 	Scan(dest ...interface{}) error

@@ -2,18 +2,22 @@ package sqlingo
 
 import "strings"
 
+// Field is the interface of a generated field.
 type Field interface {
 	Expression
 }
 
+// NumberField is the interface of a generated field of number type.
 type NumberField interface {
 	NumberExpression
 }
 
+// BooleanField is the interface of a generated field of boolean type.
 type BooleanField interface {
 	BooleanExpression
 }
 
+// StringField is the interface of a generated field of string type.
 type StringField interface {
 	StringExpression
 }
@@ -41,21 +45,24 @@ func newFieldExpression(tableName string, fieldName string) expression {
 	}
 }
 
+// NewNumberField creates a reference to a number field. It should only be called from generated code.
 func NewNumberField(tableName string, fieldName string) NumberField {
 	return newFieldExpression(tableName, fieldName)
 }
 
+// NewBooleanField creates a reference to a boolean field. It should only be called from generated code.
 func NewBooleanField(tableName string, fieldName string) BooleanField {
 	return newFieldExpression(tableName, fieldName)
 }
 
+// NewStringField creates a reference to a string field. It should only be called from generated code.
 func NewStringField(tableName string, fieldName string) StringField {
 	return newFieldExpression(tableName, fieldName)
 }
 
-type FieldList []Field
+type fieldList []Field
 
-func (fields FieldList) GetSQL(scope scope) (string, error) {
+func (fields fieldList) GetSQL(scope scope) (string, error) {
 	isSingleTable := len(scope.Tables) == 1 && scope.lastJoin == nil
 	var sb strings.Builder
 	if len(fields) == 0 {

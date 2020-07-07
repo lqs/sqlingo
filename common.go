@@ -6,11 +6,13 @@ import (
 	"strings"
 )
 
+// Model is the interface of generated model struct
 type Model interface {
 	GetTable() Table
 	GetValues() []interface{}
 }
 
+// Assignment is an assignment statement
 type Assignment interface {
 	GetSQL(scope scope) (string, error)
 }

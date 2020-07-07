@@ -5,6 +5,7 @@ import (
 	"database/sql"
 )
 
+// Transaction is the interface of a transaction with underlying sql.Tx object.
 type Transaction interface {
 	GetDB() *sql.DB
 	GetTx() *sql.Tx

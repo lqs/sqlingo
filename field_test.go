@@ -37,7 +37,7 @@ func TestField(t *testing.T) {
 	assertValue(t, NewBooleanField("t1", "f1").Equals(true), "`t1`.`f1` = 1")
 	assertValue(t, NewStringField("t1", "f1").Equals("x"), "`t1`.`f1` = 'x'")
 
-	sql, _ := FieldList{}.GetSQL(scope{
+	sql, _ := fieldList{}.GetSQL(scope{
 		Tables: []Table{
 			&dummyTable{},
 		},
@@ -46,7 +46,7 @@ func TestField(t *testing.T) {
 		t.Error(sql)
 	}
 
-	sql, _ = FieldList{}.GetSQL(scope{
+	sql, _ = fieldList{}.GetSQL(scope{
 		Tables: []Table{
 			&dummyTable{},
 			&dummyTable{},
@@ -56,7 +56,7 @@ func TestField(t *testing.T) {
 		t.Error(sql)
 	}
 
-	if _, err := (FieldList{
+	if _, err := (fieldList{
 		expression{builder: func(scope scope) (string, error) {
 			return "", errors.New("error")
 		}},

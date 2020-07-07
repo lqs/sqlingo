@@ -2,12 +2,14 @@ package sqlingo
 
 import "strings"
 
+// CaseExpression indicates the status in a CASE statement
 type CaseExpression interface {
 	WhenThen(when BooleanExpression, then interface{}) CaseExpression
 	Else(value interface{}) CaseExpressionWithElse
 	End() Expression
 }
 
+// CaseExpressionWithElse indicates the status in CASE ... ELSE ... statement
 type CaseExpressionWithElse interface {
 	End() Expression
 }
@@ -23,6 +25,7 @@ type whenThen struct {
 	then interface{}
 }
 
+// Case initiates a CASE statement
 func Case() CaseExpression {
 	return caseStatus{}
 }

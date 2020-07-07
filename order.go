@@ -1,5 +1,6 @@
 package sqlingo
 
+// OrderBy indicates the ORDER BY column and the status of descending order.
 type OrderBy interface {
 	GetSQL(scope scope) (string, error)
 }

@@ -1,7 +1,7 @@
 package sqlingo
 
 import (
-	. "context"
+	"context"
 	"errors"
 	"reflect"
 	"strconv"
@@ -101,7 +101,7 @@ type selectWithLock interface {
 }
 
 type toSelectWithContext interface {
-	WithContext(ctx Context) toSelectFinal
+	WithContext(ctx context.Context) toSelectFinal
 }
 
 type toSelectFinal interface {
@@ -123,14 +123,14 @@ type join struct {
 type selectStatus struct {
 	scope    scope
 	distinct bool
-	fields   FieldList
+	fields   fieldList
 	where    BooleanExpression
 	orderBys []OrderBy
 	groupBys []Expression
 	having   BooleanExpression
 	limit    *int
 	offset   int
-	ctx      Context
+	ctx      context.Context
 	lock     string
 }
 
@@ -263,8 +263,8 @@ func (s selectStatus) ForUpdate() selectWithLock {
 
 func (s selectStatus) asDerivedTable(name string) Table {
 	return derivedTable{
-		name:    name,
-		select_: s,
+		name:         name,
+		selectStatus: s,
 	}
 }
 
@@ -364,17 +364,9 @@ func (s selectStatus) GetSQL() (string, error) {
 	return sb.String(), nil
 }
 
-func (s selectStatus) WithContext(ctx Context) toSelectFinal {
+func (s selectStatus) WithContext(ctx context.Context) toSelectFinal {
 	s.ctx = ctx
 	return s
-}
-
-func (s selectStatus) getContext() Context {
-	if s.ctx != nil {
-		return s.ctx
-	} else {
-		return Background()
-	}
 }
 
 func (s selectStatus) FetchCursor() (Cursor, error) {
@@ -383,7 +375,7 @@ func (s selectStatus) FetchCursor() (Cursor, error) {
 		return nil, err
 	}
 
-	cursor, err := s.scope.Database.QueryContext(s.getContext(), sqlString)
+	cursor, err := s.scope.Database.QueryContext(s.ctx, sqlString)
 	if err != nil {
 		return nil, err
 	}

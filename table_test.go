@@ -12,7 +12,7 @@ func TestTable(t *testing.T) {
 func TestDerivedTable(t *testing.T) {
 	dummyFields := []Field{NewNumberField("table", "field")}
 	dt := derivedTable{
-		select_: selectStatus{
+		selectStatus: selectStatus{
 			fields: dummyFields,
 		},
 	}
