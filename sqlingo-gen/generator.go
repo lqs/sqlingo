@@ -159,7 +159,7 @@ func generate(driverName string, dataSourceName string, tableNames []string) (st
 		}
 		code += tableCode
 	}
-	code += generateTableMap(tableNames)
+	code += generateGetTable(tableNames)
 	codeOut, err := format.Source([]byte(code))
 	if err != nil {
 		return "", err
@@ -167,14 +167,16 @@ func generate(driverName string, dataSourceName string, tableNames []string) (st
 	return string(codeOut), nil
 }
 
-func generateTableMap(tableNames []string) string {
-	tablePairs := ""
+func generateGetTable(tableNames []string) string {
+	code := "func GetTable(name string) Table {\n"
+	code += "\tswitch name {\n"
 	for _, tableName := range tableNames {
-		tablePairs += "\t" + strconv.Quote(tableName) + ": " + convertCase(tableName) + ",\n"
+		code += "\tcase " + strconv.Quote(tableName) + ": return " + convertCase(tableName) + "\n"
 	}
-	tableMapCode := fmt.Sprintf("var tableMap = map[string]Table {\n %s}\n", tablePairs)
-	tableMapCode += "func GetTable(name string) (Table) {\n\tif table, ok := tableMap[name]; ok {\n\t\treturn table\n\t}\n\treturn nil\n}\n"
-	return tableMapCode
+	code += "\tdefault: return nil\n"
+	code += "\t}\n"
+	code += "}\n\n"
+	return code
 }
 
 func generateTable(schemaFetcher schemaFetcher, tableName string) (string, error) {
@@ -260,18 +262,18 @@ func generateTable(schemaFetcher schemaFetcher, tableName string) (string, error
 	code += "}\n\n"
 
 	code += "func (t t" + className + ") GetFieldByName(name string) Field {\n"
-	code += "\tswitch (name) {\n"
+	code += "\tswitch name {\n"
 	code += fieldCaseLines
 	code += "\tdefault: return nil\n"
-	code += "\t}"
+	code += "\t}\n"
 	code += "}\n\n"
 
 	code += "func (t t" + className + ") GetFieldsSQL() string {\n"
-	code += " return " + strconv.Quote(fieldsSQL) + "\n"
+	code += "\treturn " + strconv.Quote(fieldsSQL) + "\n"
 	code += "}\n\n"
 
 	code += "func (t t" + className + ") GetFullFieldsSQL() string {\n"
-	code += " return " + strconv.Quote(fullFieldsSQL) + "\n"
+	code += "\treturn " + strconv.Quote(fullFieldsSQL) + "\n"
 	code += "}\n\n"
 
 	code += "type " + modelClassName + " struct {\n"
