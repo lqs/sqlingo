@@ -6,11 +6,13 @@ import (
 	"strconv"
 )
 
+type priority uint8
+
 // Expression is the interface of a SQL expression.
 type Expression interface {
 	// get the SQL string
 	GetSQL(scope scope) (string, error)
-	getOperatorPriority() int
+	getOperatorPriority() priority
 
 	// <> operator
 	NotEquals(other interface{}) BooleanExpression
@@ -97,7 +99,7 @@ type UnknownExpression interface {
 type expression struct {
 	sql      string
 	builder  func(scope scope) (string, error)
-	priority int
+	priority priority
 	isTrue   bool
 	isFalse  bool
 }
@@ -108,7 +110,7 @@ type scope struct {
 	lastJoin *join
 }
 
-func staticExpression(sql string, priority int) expression {
+func staticExpression(sql string, priority priority) expression {
 	return expression{
 		sql:      sql,
 		priority: priority,
@@ -224,7 +226,7 @@ func quoteString(s string) string {
 	return string(buf[:n])
 }
 
-func getSQL(scope scope, value interface{}) (sql string, priority int, err error) {
+func getSQL(scope scope, value interface{}) (sql string, priority priority, err error) {
 	if value == nil {
 		sql = "NULL"
 		return
@@ -258,7 +260,7 @@ func getSQL(scope scope, value interface{}) (sql string, priority int, err error
 	return
 }
 
-func getSQLFromReflectValue(scope scope, v reflect.Value) (sql string, priority int, err error) {
+func getSQLFromReflectValue(scope scope, v reflect.Value) (sql string, priority priority, err error) {
 	if v.Kind() == reflect.Ptr {
 		// dereference pointers
 		for {
@@ -349,16 +351,40 @@ func (e expression) GreaterThanOrEquals(other interface{}) BooleanExpression {
 	return e.binaryOperation(">=", other, 11)
 }
 
+func toBooleanExpression(value interface{}) BooleanExpression {
+	e, ok := value.(expression)
+	switch {
+	case !ok:
+		return nil
+	case e.isTrue:
+		return trueExpression()
+	case e.isFalse:
+		return falseExpression()
+	default:
+		return nil
+	}
+}
+
 func (e expression) And(other interface{}) BooleanExpression {
-	if e.isFalse {
+	switch {
+	case e.isFalse:
 		return e
+	case e.isTrue:
+		if exp := toBooleanExpression(other); exp != nil {
+			return exp
+		}
 	}
 	return e.binaryOperation("AND", other, 14)
 }
 
 func (e expression) Or(other interface{}) BooleanExpression {
-	if e.isTrue {
+	switch {
+	case e.isTrue:
 		return e
+	case e.isFalse:
+		if exp := toBooleanExpression(other); exp != nil {
+			return exp
+		}
 	}
 	return e.binaryOperation("OR", other, 16)
 }
@@ -411,7 +437,7 @@ func (e expression) Contains(substring string) BooleanExpression {
 	return function("LOCATE", substring, e).GreaterThan(0)
 }
 
-func (e expression) binaryOperation(operator string, value interface{}, priority int) expression {
+func (e expression) binaryOperation(operator string, value interface{}, priority priority) expression {
 	return expression{builder: func(scope scope) (string, error) {
 		leftSql, err := e.GetSQL(scope)
 		if err != nil {
@@ -432,7 +458,7 @@ func (e expression) binaryOperation(operator string, value interface{}, priority
 	}, priority: priority}
 }
 
-func (e expression) prefixSuffixExpression(prefix string, suffix string, priority int) expression {
+func (e expression) prefixSuffixExpression(prefix string, suffix string, priority priority) expression {
 	if e.sql != "" {
 		return expression{
 			sql:      prefix + e.sql + suffix,
@@ -466,7 +492,7 @@ func (e expression) IsNotNull() BooleanExpression {
 	return e.prefixSuffixExpression("", " IS NOT NULL", 11)
 }
 
-func (e expression) In(values ...interface{}) BooleanExpression {
+func expandSliceValues(values []interface{}) []interface{} {
 	if len(values) == 1 {
 		value := reflect.ValueOf(values[0])
 		kind := value.Kind()
@@ -478,6 +504,11 @@ func (e expression) In(values ...interface{}) BooleanExpression {
 			}
 		}
 	}
+	return values
+}
+
+func (e expression) In(values ...interface{}) BooleanExpression {
+	values = expandSliceValues(values)
 	if len(values) == 0 {
 		return falseExpression()
 	}
@@ -487,17 +518,7 @@ func (e expression) In(values ...interface{}) BooleanExpression {
 }
 
 func (e expression) NotIn(values ...interface{}) BooleanExpression {
-	if len(values) == 1 {
-		value := reflect.ValueOf(values[0])
-		kind := value.Kind()
-		if kind == reflect.Array || kind == reflect.Slice {
-			length := value.Len()
-			values = make([]interface{}, length)
-			for i := 0; i < length; i++ {
-				values[i] = value.Index(i).Interface()
-			}
-		}
-	}
+	values = expandSliceValues(values)
 	if len(values) == 0 {
 		return trueExpression()
 	}
@@ -562,7 +583,7 @@ func (e expression) Between(min interface{}, max interface{}) BooleanExpression 
 
 }
 
-func (e expression) getOperatorPriority() int {
+func (e expression) getOperatorPriority() priority {
 	return e.priority
 }
 

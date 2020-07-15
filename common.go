@@ -47,6 +47,7 @@ func command(name string, arg interface{}) expression {
 
 func commaFields(scope scope, fields []Field) (string, error) {
 	var sqlBuilder strings.Builder
+	sqlBuilder.Grow(128)
 	for i, item := range fields {
 		if i > 0 {
 			sqlBuilder.WriteString(", ")
@@ -62,6 +63,7 @@ func commaFields(scope scope, fields []Field) (string, error) {
 
 func commaExpressions(scope scope, expressions []Expression) (string, error) {
 	var sqlBuilder strings.Builder
+	sqlBuilder.Grow(128)
 	for i, item := range expressions {
 		if i > 0 {
 			sqlBuilder.WriteString(", ")

@@ -167,9 +167,12 @@ func TestLogicalExpression(t *testing.T) {
 	a := expression{sql: "a", priority: 1}
 	b := expression{sql: "b", priority: 1}
 	c := expression{sql: "c", priority: 1}
+	d := expression{sql: "d", priority: 1}
 
-	assertValue(t, And(a, b, c), "a AND b AND c")
-	assertValue(t, Or(a, b, c), "a OR b OR c")
+	assertValue(t, And(a, b, c, d), "a AND b AND c AND d")
+	assertValue(t, Or(a, b, c, d), "a OR b OR c OR d")
+	assertValue(t, a.And(b).Or(c).And(a).Or(b).And(c), "((a AND b OR c) AND a OR b) AND c")
+	assertValue(t, a.Or(b).And(c.Or(d)), "(a OR b) AND (c OR d)")
 
 	assertValue(t, And(), "1")
 	assertValue(t, Or(), "0")
@@ -178,17 +181,21 @@ func TestLogicalExpression(t *testing.T) {
 func TestLogicalOptimizer(t *testing.T) {
 	trueValue := trueExpression()
 	falseValue := falseExpression()
+	otherValue := staticExpression("<>", 0)
 
 	assertValue(t, trueValue.Or(trueValue), "1")
 	assertValue(t, trueValue.Or(falseValue), "1")
-	assertValue(t, falseValue.Or(trueValue), "0 OR 1")
-	assertValue(t, falseValue.Or(falseValue), "0 OR 0")
+	assertValue(t, falseValue.Or(trueValue), "1")
+	assertValue(t, falseValue.Or(falseValue), "0")
 
-	assertValue(t, trueValue.And(trueValue), "1 AND 1")
-	assertValue(t, trueValue.And(falseValue), "1 AND 0")
+	assertValue(t, trueValue.And(trueValue), "1")
+	assertValue(t, trueValue.And(falseValue), "0")
 	assertValue(t, falseValue.And(trueValue), "0")
 	assertValue(t, falseValue.And(falseValue), "0")
 
 	assertValue(t, falseValue.Not(), "1")
 	assertValue(t, trueValue.Not(), "0")
+
+	assertValue(t, trueValue.And(otherValue), "1 AND <>")
+	assertValue(t, trueValue.And(123), "1 AND 123")
 }
