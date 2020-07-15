@@ -12,20 +12,12 @@ func TestTable(t *testing.T) {
 func TestDerivedTable(t *testing.T) {
 	dummyFields := []Field{NewNumberField("table", "field")}
 	dt := derivedTable{
+		name: "t",
 		selectStatus: selectStatus{
 			fields: dummyFields,
 		},
 	}
-	if dt.GetFieldByName("dummy") != nil {
-		t.Error()
-	}
-	if dt.GetFieldsSQL() != "" {
-		t.Error()
-	}
-	if dt.GetFullFieldsSQL() != "" {
-		t.Error()
-	}
-	if dt.GetName() != "" {
+	if dt.GetName() != "t" {
 		t.Error()
 	}
 

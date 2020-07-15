@@ -4,8 +4,11 @@ package sqlingo
 type Table interface {
 	GetName() string
 	GetSQL(scope scope) string
-	GetFieldByName(name string) Field
 	GetFields() []Field
+}
+
+type actualTable interface {
+	Table
 	GetFieldsSQL() string
 	GetFullFieldsSQL() string
 }
@@ -36,18 +39,6 @@ func NewTable(name string) Table {
 type derivedTable struct {
 	name         string
 	selectStatus selectStatus
-}
-
-func (t derivedTable) GetFieldByName(name string) Field {
-	return nil
-}
-
-func (t derivedTable) GetFieldsSQL() string {
-	return ""
-}
-
-func (t derivedTable) GetFullFieldsSQL() string {
-	return ""
 }
 
 func (t derivedTable) GetName() string {

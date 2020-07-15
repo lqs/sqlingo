@@ -70,10 +70,15 @@ func (fields fieldList) GetSQL(scope scope) (string, error) {
 			if i > 0 {
 				sb.WriteString(", ")
 			}
-			if isSingleTable {
-				sb.WriteString(table.GetFieldsSQL())
+			actualTable, ok := table.(actualTable)
+			if ok {
+				if isSingleTable {
+					sb.WriteString(actualTable.GetFieldsSQL())
+				} else {
+					sb.WriteString(actualTable.GetFullFieldsSQL())
+				}
 			} else {
-				sb.WriteString(table.GetFullFieldsSQL())
+				sb.WriteByte('*')
 			}
 		}
 	} else {
