@@ -57,6 +57,11 @@ func TestSelect(t *testing.T) {
 
 	db.SelectFrom(Table1).GetSQL()
 
+	db.Select([]Field{field1, field2}).From(Table1).FetchFirst()
+	assertLastSql(t, "SELECT `field1`, `field2` FROM `table1`")
+
+	db.Select([]interface{}{&field1, field2, []int{3, 4}}).From(Table1).FetchFirst()
+	assertLastSql(t, "SELECT `field1`, `field2`, 3, 4 FROM `table1`")
 }
 
 func TestCount(t *testing.T) {

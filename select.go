@@ -157,6 +157,7 @@ func (s selectStatus) On(condition BooleanExpression) selectWithJoinOn {
 }
 
 func getFields(fields []interface{}) (result []Field) {
+	fields = expandSliceValues(fields)
 	result = make([]Field, 0, len(fields))
 	for _, field := range fields {
 		switch field.(type) {

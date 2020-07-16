@@ -492,19 +492,30 @@ func (e expression) IsNotNull() BooleanExpression {
 	return e.prefixSuffixExpression("", " IS NOT NULL", 11)
 }
 
-func expandSliceValues(values []interface{}) []interface{} {
-	if len(values) == 1 {
-		value := reflect.ValueOf(values[0])
-		kind := value.Kind()
-		if kind == reflect.Array || kind == reflect.Slice {
-			length := value.Len()
-			values = make([]interface{}, length)
-			for i := 0; i < length; i++ {
-				values[i] = value.Index(i).Interface()
-			}
+func expandSliceValue(value reflect.Value) (result []interface{}) {
+	result = make([]interface{}, 0, 16)
+	kind := value.Kind()
+	switch kind {
+	case reflect.Array, reflect.Slice:
+		length := value.Len()
+		for i := 0; i < length; i++ {
+			result = append(result, expandSliceValue(value.Index(i))...)
 		}
+	case reflect.Interface, reflect.Ptr:
+		result = append(result, expandSliceValue(value.Elem())...)
+	default:
+		result = append(result, value.Interface())
 	}
-	return values
+	return
+}
+
+func expandSliceValues(values []interface{}) (result []interface{}) {
+	result = make([]interface{}, 0, 16)
+	for _, v := range values {
+		value := reflect.ValueOf(v)
+		result = append(result, expandSliceValue(value)...)
+	}
+	return
 }
 
 func (e expression) In(values ...interface{}) BooleanExpression {
