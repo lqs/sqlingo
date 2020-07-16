@@ -21,6 +21,13 @@
 * Transaction support
 * Interceptor support
 
+## Database Support Status
+| Database    | Status       |
+------------- | --------------
+| MySQL       | stable       |
+| PostgreSQL  | experimental |
+| SQLite      | experimental |
+
 ## Tutorial
 
 ### Install and use sqlingo code generator
