@@ -144,20 +144,19 @@ type selectBase struct {
 }
 
 type selectStatus struct {
-	base       selectBase
-	orderBys   []OrderBy
-	firstUnion *unionSelectStatus
-	lastUnion  *unionSelectStatus
-	limit      *int
-	offset     int
-	ctx        context.Context
-	lock       string
+	base      selectBase
+	orderBys  []OrderBy
+	lastUnion *unionSelectStatus
+	limit     *int
+	offset    int
+	ctx       context.Context
+	lock      string
 }
 
 type unionSelectStatus struct {
-	base selectBase
-	all  bool
-	next *unionSelectStatus
+	base     selectBase
+	all      bool
+	previous *unionSelectStatus
 }
 
 func (s *selectStatus) activeSelectBase() *selectBase {
@@ -298,7 +297,7 @@ func (s selectStatus) UnionAllSelectDistinct(fields ...interface{}) selectWithFi
 }
 
 func (s selectStatus) withUnionSelect(all bool, distinct bool, fields []interface{}, tables []Table) selectStatus {
-	union := &unionSelectStatus{
+	s.lastUnion = &unionSelectStatus{
 		base: selectBase{
 			scope: scope{
 				Database: s.base.scope.Database,
@@ -307,14 +306,8 @@ func (s selectStatus) withUnionSelect(all bool, distinct bool, fields []interfac
 			distinct: distinct,
 			fields:   getFields(fields),
 		},
-		all: all,
-	}
-	if s.firstUnion == nil {
-		s.firstUnion = union
-		s.lastUnion = union
-	} else {
-		s.lastUnion.next = union
-		s.lastUnion = union
+		all:      all,
+		previous: s.lastUnion,
 	}
 	return s
 }
@@ -335,7 +328,7 @@ func (s selectStatus) Offset(offset int) selectWithOffset {
 }
 
 func (s selectStatus) Count() (count int, err error) {
-	if s.firstUnion == nil && len(s.base.groupBys) == 0 {
+	if s.lastUnion == nil && len(s.base.groupBys) == 0 {
 		if s.base.distinct {
 			fields := s.base.fields
 			s.base.distinct = false
@@ -408,8 +401,7 @@ func (s selectBase) buildSelectBase(sb *strings.Builder) error {
 		for j := s.scope.lastJoin; j != nil; j = j.previous {
 			joins = append(joins, j)
 		}
-		count := len(joins)
-		for i := count - 1; i >= 0; i-- {
+		for i := len(joins) - 1; i >= 0; i-- {
 			join := joins[i]
 			onSql, err := join.on.GetSQL(s.scope)
 			if err != nil {
@@ -461,7 +453,12 @@ func (s selectStatus) GetSQL() (string, error) {
 		return "", err
 	}
 
-	for union := s.firstUnion; union != nil; union = union.next {
+	var unions []*unionSelectStatus
+	for union := s.lastUnion; union != nil; union = union.previous {
+		unions = append(unions, union)
+	}
+	for i := len(unions) - 1; i >= 0; i-- {
+		union := unions[i]
 		if union.all {
 			sb.WriteString(" UNION ALL ")
 		} else {
