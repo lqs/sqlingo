@@ -125,3 +125,56 @@ func TestLock(t *testing.T) {
 	db.Select(1).From(table1).LockInShareMode()
 	db.Select(1).From(table1).ForUpdate()
 }
+
+func TestUnion(t *testing.T) {
+	db := newMockDatabase()
+	table1 := NewTable("table1")
+	table2 := NewTable("table2")
+
+	cond1 := Raw("<condition 1>")
+	cond2 := Raw("<condition 2>")
+
+	_, _ = db.SelectFrom(table1).UnionSelectFrom(table2).Where(cond1).FetchAll()
+	assertLastSql(t, "SELECT * FROM `table1` UNION SELECT * FROM `table2` WHERE <condition 1>")
+
+
+	_, _ = db.SelectFrom(table1).Where(cond1).
+		UnionSelectFrom(table2).Where(cond2).FetchAll()
+	assertLastSql(t, "SELECT * FROM `table1` WHERE <condition 1> UNION SELECT * FROM `table2` WHERE <condition 2>")
+
+
+	_, _ = db.SelectFrom(table1).Where(Raw("C1")).
+		UnionSelectFrom(table2).Where(Raw("C2")).
+		UnionSelect(3).From(table2).Where(Raw("C3")).
+		UnionSelectDistinct(4).From(table2).Where(Raw("C4")).
+		UnionAllSelectFrom(table2).Where(Raw("C5")).
+		UnionAllSelect(6).From(table2).Where(Raw("C6")).
+		UnionAllSelectDistinct(7).From(table2).Where(Raw("C7")).
+		FetchAll()
+	assertLastSql(t, "SELECT * FROM `table1` WHERE C1 " +
+		"UNION SELECT * FROM `table2` WHERE C2 " +
+		"UNION SELECT 3 FROM `table2` WHERE C3 " +
+		"UNION SELECT DISTINCT 4 FROM `table2` WHERE C4 " +
+		"UNION ALL SELECT * FROM `table2` WHERE C5 " +
+		"UNION ALL SELECT 6 FROM `table2` WHERE C6 " +
+		"UNION ALL SELECT DISTINCT 7 FROM `table2` WHERE C7")
+
+
+	_, _ = db.SelectFrom(table1).Where(Raw("C1")).
+		UnionSelectFrom(table2).Where(Raw("C2")).
+		UnionSelect(3).From(table2).Where(Raw("C3")).
+		UnionSelectDistinct(4).From(table2).Where(Raw("C4")).
+		UnionAllSelectFrom(table2).Where(Raw("C5")).
+		UnionAllSelect(6).From(table2).Where(Raw("C6")).
+		UnionAllSelectDistinct(7).From(table2).Where(Raw("C7")).
+		Count()
+	assertLastSql(t, "SELECT COUNT(1) FROM (" +
+		"SELECT 1 FROM `table1` WHERE C1 " +
+		"UNION SELECT * FROM `table2` WHERE C2 " +
+		"UNION SELECT 3 FROM `table2` WHERE C3 " +
+		"UNION SELECT DISTINCT 4 FROM `table2` WHERE C4 " +
+		"UNION ALL SELECT * FROM `table2` WHERE C5 " +
+		"UNION ALL SELECT 6 FROM `table2` WHERE C6 " +
+		"UNION ALL SELECT DISTINCT 7 FROM `table2` WHERE C7" +
+		") AS t")
+}

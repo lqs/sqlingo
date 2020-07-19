@@ -14,7 +14,9 @@ func TestDerivedTable(t *testing.T) {
 	dt := derivedTable{
 		name: "t",
 		selectStatus: selectStatus{
-			fields: dummyFields,
+			base: selectBase{
+				fields: dummyFields,
+			},
 		},
 	}
 	if dt.GetName() != "t" {

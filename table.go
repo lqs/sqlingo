@@ -51,5 +51,5 @@ func (t derivedTable) GetSQL(scope scope) string {
 }
 
 func (t derivedTable) GetFields() []Field {
-	return t.selectStatus.fields
+	return t.selectStatus.activeSelectBase().fields
 }

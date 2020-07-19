@@ -19,6 +19,7 @@ type selectWithTables interface {
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
+	toUnionSelect
 	Where(conditions ...BooleanExpression) selectWithWhere
 	GroupBy(expressions ...Expression) selectWithGroupBy
 	OrderBy(orderBys ...OrderBy) selectWithOrder
@@ -39,6 +40,7 @@ type selectWithJoinOn interface {
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
+	toUnionSelect
 	Where(conditions ...BooleanExpression) selectWithWhere
 	GroupBy(expressions ...Expression) selectWithGroupBy
 	OrderBy(orderBys ...OrderBy) selectWithOrder
@@ -49,6 +51,7 @@ type selectWithWhere interface {
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
+	toUnionSelect
 	GroupBy(expressions ...Expression) selectWithGroupBy
 	OrderBy(orderBys ...OrderBy) selectWithOrder
 	Limit(limit int) selectWithLimit
@@ -58,6 +61,7 @@ type selectWithGroupBy interface {
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
+	toUnionSelect
 	Having(conditions ...BooleanExpression) selectWithGroupByHaving
 	OrderBy(orderBys ...OrderBy) selectWithOrder
 	Limit(limit int) selectWithLimit
@@ -67,6 +71,7 @@ type selectWithGroupByHaving interface {
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
+	toUnionSelect
 	OrderBy(orderBys ...OrderBy) selectWithOrder
 }
 
@@ -104,6 +109,15 @@ type toSelectWithContext interface {
 	WithContext(ctx context.Context) toSelectFinal
 }
 
+type toUnionSelect interface {
+	UnionSelect(fields ...interface{}) selectWithFields
+	UnionSelectFrom(tables ...Table) selectWithTables
+	UnionSelectDistinct(fields ...interface{}) selectWithFields
+	UnionAllSelect(fields ...interface{}) selectWithFields
+	UnionAllSelectFrom(tables ...Table) selectWithTables
+	UnionAllSelectDistinct(fields ...interface{}) selectWithFields
+}
+
 type toSelectFinal interface {
 	Exists() (bool, error)
 	Count() (int, error)
@@ -120,39 +134,66 @@ type join struct {
 	on       BooleanExpression
 }
 
-type selectStatus struct {
+type selectBase struct {
 	scope    scope
 	distinct bool
 	fields   fieldList
 	where    BooleanExpression
-	orderBys []OrderBy
 	groupBys []Expression
 	having   BooleanExpression
-	limit    *int
-	offset   int
-	ctx      context.Context
-	lock     string
+}
+
+type selectStatus struct {
+	base       selectBase
+	orderBys   []OrderBy
+	firstUnion *unionSelectStatus
+	lastUnion  *unionSelectStatus
+	limit      *int
+	offset     int
+	ctx        context.Context
+	lock       string
+}
+
+type unionSelectStatus struct {
+	base selectBase
+	all  bool
+	next *unionSelectStatus
+}
+
+func (s *selectStatus) activeSelectBase() *selectBase {
+	if s.lastUnion != nil {
+		return &s.lastUnion.base
+	}
+	return &s.base
 }
 
 func (s selectStatus) Join(table Table) selectWithJoin {
-	s.scope.lastJoin = &join{previous: s.scope.lastJoin, table: table}
-	return s
+	return s.join("", table)
 }
 
 func (s selectStatus) LeftJoin(table Table) selectWithJoin {
-	s.scope.lastJoin = &join{previous: s.scope.lastJoin, prefix: "LEFT ", table: table}
-	return s
+	return s.join("LEFT ", table)
 }
 
 func (s selectStatus) RightJoin(table Table) selectWithJoin {
-	s.scope.lastJoin = &join{previous: s.scope.lastJoin, prefix: "RIGHT ", table: table}
+	return s.join("RIGHT ", table)
+}
+
+func (s selectStatus) join(prefix string, table Table) selectWithJoin {
+	base := s.activeSelectBase()
+	base.scope.lastJoin = &join{
+		previous: base.scope.lastJoin,
+		prefix:   prefix,
+		table:    table,
+	}
 	return s
 }
 
 func (s selectStatus) On(condition BooleanExpression) selectWithJoinOn {
-	join := *s.scope.lastJoin
+	base := s.activeSelectBase()
+	join := *base.scope.lastJoin
 	join.on = condition
-	s.scope.lastJoin = &join
+	base.scope.lastJoin = &join
 	return s
 }
 
@@ -179,34 +220,102 @@ func getFields(fields []interface{}) (result []Field) {
 }
 
 func (d *database) Select(fields ...interface{}) selectWithFields {
-	return selectStatus{scope: scope{Database: d}, fields: getFields(fields)}
+	return selectStatus{
+		base: selectBase{
+			scope: scope{
+				Database: d,
+			},
+			fields: getFields(fields),
+		},
+	}
 }
 
 func (s selectStatus) From(tables ...Table) selectWithTables {
-	s.scope.Tables = tables
+	s.activeSelectBase().scope.Tables = tables
 	return s
 }
 
 func (d *database) SelectFrom(tables ...Table) selectWithTables {
-	return selectStatus{scope: scope{Database: d, Tables: tables}}
+	return selectStatus{
+		base: selectBase{
+			scope: scope{
+				Database: d,
+				Tables:   tables,
+			},
+		},
+	}
 }
 
 func (d *database) SelectDistinct(fields ...interface{}) selectWithFields {
-	return selectStatus{scope: scope{Database: d}, fields: getFields(fields), distinct: true}
+	return selectStatus{
+		base: selectBase{
+			scope: scope{
+				Database: d,
+			},
+			fields:   getFields(fields),
+			distinct: true,
+		},
+	}
 }
 
 func (s selectStatus) Where(conditions ...BooleanExpression) selectWithWhere {
-	s.where = And(conditions...)
+	s.activeSelectBase().where = And(conditions...)
 	return s
 }
 
 func (s selectStatus) GroupBy(expressions ...Expression) selectWithGroupBy {
-	s.groupBys = expressions
+	s.activeSelectBase().groupBys = expressions
 	return s
 }
 
 func (s selectStatus) Having(conditions ...BooleanExpression) selectWithGroupByHaving {
-	s.having = And(conditions...)
+	s.activeSelectBase().having = And(conditions...)
+	return s
+}
+
+func (s selectStatus) UnionSelect(fields ...interface{}) selectWithFields {
+	return s.withUnionSelect(false, false, fields, nil)
+}
+
+func (s selectStatus) UnionSelectFrom(tables ...Table) selectWithTables {
+	return s.withUnionSelect(false, false, nil, tables)
+}
+
+func (s selectStatus) UnionSelectDistinct(fields ...interface{}) selectWithFields {
+	return s.withUnionSelect(false, true, fields, nil)
+}
+
+func (s selectStatus) UnionAllSelect(fields ...interface{}) selectWithFields {
+	return s.withUnionSelect(true, false, fields, nil)
+}
+
+func (s selectStatus) UnionAllSelectFrom(tables ...Table) selectWithTables {
+	return s.withUnionSelect(true, false, nil, tables)
+}
+
+func (s selectStatus) UnionAllSelectDistinct(fields ...interface{}) selectWithFields {
+	return s.withUnionSelect(true, true, fields, nil)
+}
+
+func (s selectStatus) withUnionSelect(all bool, distinct bool, fields []interface{}, tables []Table) selectStatus {
+	union := &unionSelectStatus{
+		base: selectBase{
+			scope: scope{
+				Database: s.base.scope.Database,
+				Tables:   tables,
+			},
+			distinct: distinct,
+			fields:   getFields(fields),
+		},
+		all: all,
+	}
+	if s.firstUnion == nil {
+		s.firstUnion = union
+		s.lastUnion = union
+	} else {
+		s.lastUnion.next = union
+		s.lastUnion = union
+	}
 	return s
 }
 
@@ -226,11 +335,11 @@ func (s selectStatus) Offset(offset int) selectWithOffset {
 }
 
 func (s selectStatus) Count() (count int, err error) {
-	if len(s.groupBys) == 0 {
-		if s.distinct {
-			fields := s.fields
-			s.distinct = false
-			s.fields = []Field{expression{builder: func(scope scope) (string, error) {
+	if s.firstUnion == nil && len(s.base.groupBys) == 0 {
+		if s.base.distinct {
+			fields := s.base.fields
+			s.base.distinct = false
+			s.base.fields = []Field{expression{builder: func(scope scope) (string, error) {
 				fieldsSql, err := fields.GetSQL(scope)
 				if err != nil {
 					return "", err
@@ -239,14 +348,16 @@ func (s selectStatus) Count() (count int, err error) {
 			}}}
 			_, err = s.FetchFirst(&count)
 		} else {
-			s.fields = []Field{staticExpression("COUNT(1)", 0)}
+			s.base.fields = []Field{staticExpression("COUNT(1)", 0)}
 			_, err = s.FetchFirst(&count)
 		}
 	} else {
-		if !s.distinct {
-			s.fields = []Field{staticExpression("1", 0)}
+		if !s.base.distinct {
+			s.base.fields = []Field{staticExpression("1", 0)}
 		}
-		_, err = s.scope.Database.Select(Function("COUNT", 1)).From(s.asDerivedTable("t")).FetchFirst(&count)
+		_, err = s.base.scope.Database.Select(Function("COUNT", 1)).
+			From(s.asDerivedTable("t")).
+			FetchFirst(&count)
 	}
 
 	return
@@ -270,13 +381,11 @@ func (s selectStatus) asDerivedTable(name string) Table {
 }
 
 func (s selectStatus) Exists() (exists bool, err error) {
-	_, err = s.scope.Database.Select(command("EXISTS", s)).FetchFirst(&exists)
+	_, err = s.base.scope.Database.Select(command("EXISTS", s)).FetchFirst(&exists)
 	return
 }
 
-func (s selectStatus) GetSQL() (string, error) {
-	var sb strings.Builder
-	sb.Grow(128)
+func (s selectBase) buildSelectBase(sb *strings.Builder) error {
 	sb.WriteString("SELECT ")
 	if s.distinct {
 		sb.WriteString("DISTINCT ")
@@ -284,7 +393,7 @@ func (s selectStatus) GetSQL() (string, error) {
 
 	fieldsSql, err := s.fields.GetSQL(s.scope)
 	if err != nil {
-		return "", err
+		return err
 	}
 	sb.WriteString(fieldsSql)
 
@@ -304,7 +413,7 @@ func (s selectStatus) GetSQL() (string, error) {
 			join := joins[i]
 			onSql, err := join.on.GetSQL(s.scope)
 			if err != nil {
-				return "", err
+				return err
 			}
 			sb.WriteString(join.prefix)
 			sb.WriteString(" JOIN ")
@@ -317,7 +426,7 @@ func (s selectStatus) GetSQL() (string, error) {
 	if s.where != nil {
 		whereSql, err := s.where.GetSQL(s.scope)
 		if err != nil {
-			return "", err
+			return err
 		}
 		sb.WriteString(" WHERE ")
 		sb.WriteString(whereSql)
@@ -326,7 +435,7 @@ func (s selectStatus) GetSQL() (string, error) {
 	if len(s.groupBys) != 0 {
 		groupBySql, err := commaExpressions(s.scope, s.groupBys)
 		if err != nil {
-			return "", err
+			return err
 		}
 		sb.WriteString(" GROUP BY ")
 		sb.WriteString(groupBySql)
@@ -334,15 +443,37 @@ func (s selectStatus) GetSQL() (string, error) {
 		if s.having != nil {
 			havingSql, err := s.having.GetSQL(s.scope)
 			if err != nil {
-				return "", err
+				return err
 			}
 			sb.WriteString(" HAVING ")
 			sb.WriteString(havingSql)
 		}
 	}
 
+	return nil
+}
+
+func (s selectStatus) GetSQL() (string, error) {
+	var sb strings.Builder
+	sb.Grow(128)
+
+	if err := s.base.buildSelectBase(&sb); err != nil {
+		return "", err
+	}
+
+	for union := s.firstUnion; union != nil; union = union.next {
+		if union.all {
+			sb.WriteString(" UNION ALL ")
+		} else {
+			sb.WriteString(" UNION ")
+		}
+		if err := union.base.buildSelectBase(&sb); err != nil {
+			return "", err
+		}
+	}
+
 	if len(s.orderBys) > 0 {
-		orderBySql, err := commaOrderBys(s.scope, s.orderBys)
+		orderBySql, err := commaOrderBys(s.base.scope, s.orderBys)
 		if err != nil {
 			return "", err
 		}
@@ -376,7 +507,7 @@ func (s selectStatus) FetchCursor() (Cursor, error) {
 		return nil, err
 	}
 
-	cursor, err := s.scope.Database.QueryContext(s.ctx, sqlString)
+	cursor, err := s.base.scope.Database.QueryContext(s.ctx, sqlString)
 	if err != nil {
 		return nil, err
 	}
