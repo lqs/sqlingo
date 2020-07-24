@@ -92,7 +92,7 @@ func TestCursor(t *testing.T) {
 
 	for i := 1; i <= 10; i++ {
 		if !cursor.Next() {
-			t.Errorf("a")
+			t.Error()
 		}
 		g = &i
 		if err := cursor.Scan(&a, &b, &cde, &f, &g); err != nil {
@@ -125,4 +125,25 @@ func TestCursor(t *testing.T) {
 		t.Error(err)
 	}
 
+}
+
+func TestCursorMap(t *testing.T) {
+	db := newMockDatabase()
+	cursor, _ := db.Query("dummy sql")
+
+	for i := 1; i <= 10; i++ {
+		if !cursor.Next() {
+			t.Error()
+		}
+		row, err := cursor.GetMap()
+		if err != nil {
+			t.Error(err)
+		}
+		if row["a"].Int() != i {
+			t.Error()
+		}
+	}
+	if cursor.Next() {
+		t.Error()
+	}
 }

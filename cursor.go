@@ -11,6 +11,7 @@ import (
 type Cursor interface {
 	Next() bool
 	Scan(dest ...interface{}) error
+	GetMap() (map[string]value, error)
 	Close() error
 }
 
@@ -136,6 +137,30 @@ func (c cursor) Scan(dest ...interface{}) error {
 	}
 
 	return err
+}
+
+func (c cursor) GetMap() (result map[string]value, err error) {
+	columns, err := c.rows.Columns()
+	if err != nil {
+		return
+	}
+
+	columnCount := len(columns)
+	values := make([]interface{}, columnCount)
+	for i := 0; i < columnCount; i++ {
+		var value *string
+		values[i] = &value
+	}
+	if err = c.rows.Scan(values...); err != nil {
+		return
+	}
+
+	result = make(map[string]value, columnCount)
+	for i, column := range columns {
+		result[column] = value{stringValue: *values[i].(**string)}
+	}
+
+	return
 }
 
 func (c cursor) Close() error {
