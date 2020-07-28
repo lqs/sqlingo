@@ -83,6 +83,9 @@ func TestCount(t *testing.T) {
 
 	_, _ = db.Select(Test.F1).From(Test).Exists()
 	assertLastSql(t, "SELECT EXISTS (SELECT `f1` FROM `test`)")
+
+	_, _ = db.Select(Test.F1).From(Test).Limit(10).Count()
+	assertLastSql(t, "SELECT COUNT(1) FROM (SELECT 1 FROM `test` LIMIT 10) AS t")
 }
 
 func TestSelectAutoFrom(t *testing.T) {

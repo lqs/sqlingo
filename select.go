@@ -328,7 +328,7 @@ func (s selectStatus) Offset(offset int) selectWithOffset {
 }
 
 func (s selectStatus) Count() (count int, err error) {
-	if s.lastUnion == nil && len(s.base.groupBys) == 0 {
+	if s.lastUnion == nil && len(s.base.groupBys) == 0  && s.limit == nil {
 		if s.base.distinct {
 			fields := s.base.fields
 			s.base.distinct = false
