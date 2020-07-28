@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"sqlingo/generator"
+	"github.com/lqs/sqlingo/generator"
 )
 
 func main() {

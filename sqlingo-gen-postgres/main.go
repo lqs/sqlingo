@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	_ "github.com/lib/pq"
-	"sqlingo/generator"
+	"github.com/lqs/sqlingo/generator"
 )
 
 func main() {
