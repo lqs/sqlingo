@@ -1,4 +1,4 @@
-package main
+package generator
 
 import "database/sql"
 
@@ -27,14 +27,14 @@ func (s sqlite3SchemaFetcher) GetTableNames() (tableNames []string, err error) {
 	return
 }
 
-func (s sqlite3SchemaFetcher) GetFieldDescriptors(tableName string) (result []fieldDescriptor, err error) {
+func (s sqlite3SchemaFetcher) GetFieldDescriptors(tableName string) (result []FieldDescriptor, err error) {
 	rows, err := s.db.Query("SELECT `name`, `type`, `notnull` FROM pragma_table_info('" + tableName + "')")
 	if err != nil {
 		return
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var fieldDescriptor fieldDescriptor
+		var fieldDescriptor FieldDescriptor
 		var notNull int
 		if err = rows.Scan(&fieldDescriptor.Name, &fieldDescriptor.Type, &notNull); err != nil {
 			return

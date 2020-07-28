@@ -1,4 +1,4 @@
-package main
+package generator
 
 import (
 	"database/sql"
@@ -34,13 +34,13 @@ func (m mysqlSchemaFetcher) GetTableNames() (tableNames []string, err error) {
 	return
 }
 
-func (m mysqlSchemaFetcher) GetFieldDescriptors(tableName string) ([]fieldDescriptor, error) {
+func (m mysqlSchemaFetcher) GetFieldDescriptors(tableName string) ([]FieldDescriptor, error) {
 	rows, err := m.db.Query("SHOW FULL COLUMNS FROM `" + tableName + "`")
 	if err != nil {
 		return nil, err
 	}
 
-	var result []fieldDescriptor
+	var result []FieldDescriptor
 	for rows.Next() {
 		columns, err := rows.Columns()
 		if err != nil {
@@ -76,7 +76,7 @@ func (m mysqlSchemaFetcher) GetFieldDescriptors(tableName string) ([]fieldDescri
 		}
 		unsigned := submatches[5] == "unsigned"
 
-		result = append(result, fieldDescriptor{
+		result = append(result, FieldDescriptor{
 			Name:      row["Field"],
 			Type:      fieldType,
 			Size:      fieldSize,

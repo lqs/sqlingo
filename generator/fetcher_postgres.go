@@ -1,4 +1,4 @@
-package main
+package generator
 
 import "database/sql"
 
@@ -28,14 +28,14 @@ func (p postgresSchemaFetcher) GetTableNames() (tableNames []string, err error) 
 	return
 }
 
-func (p postgresSchemaFetcher) GetFieldDescriptors(tableName string) (result []fieldDescriptor, err error) {
+func (p postgresSchemaFetcher) GetFieldDescriptors(tableName string) (result []FieldDescriptor, err error) {
 	rows, err := p.db.Query("SELECT column_name, is_nullable, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1", tableName)
 	if err != nil {
 		return
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var fieldDescriptor fieldDescriptor
+		var fieldDescriptor FieldDescriptor
 		var isNullable string
 		if err = rows.Scan(&fieldDescriptor.Name, &isNullable, &fieldDescriptor.Type); err != nil {
 			return

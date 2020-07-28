@@ -1,4 +1,4 @@
-package main
+package generator
 
 import (
 	"database/sql"
@@ -18,11 +18,11 @@ const (
 type schemaFetcher interface {
 	GetDatabaseName() (dbName string, err error)
 	GetTableNames() (tableNames []string, err error)
-	GetFieldDescriptors(tableName string) ([]fieldDescriptor, error)
+	GetFieldDescriptors(tableName string) ([]FieldDescriptor, error)
 	QuoteIdentifier(identifier string) string
 }
 
-type fieldDescriptor struct {
+type FieldDescriptor struct {
 	Name      string
 	Type      string
 	Size      int
@@ -48,7 +48,7 @@ func convertCase(s string) (result string) {
 	return
 }
 
-func getType(fieldDescriptor fieldDescriptor) (goType string, fieldClass string, err error) {
+func getType(fieldDescriptor FieldDescriptor) (goType string, fieldClass string, err error) {
 	switch strings.ToLower(fieldDescriptor.Type) {
 	case "tinyint":
 		goType = "int8"
@@ -108,14 +108,15 @@ func getSchemaFetcherFactory(driverName string) func(db *sql.DB) schemaFetcher {
 	}
 }
 
-func generate(driverName string, dataSourceName string, tableNames []string) (string, error) {
-	schemaFetcherFactory := getSchemaFetcherFactory(driverName)
+func Generate(driverName string, exampleDataSourceName string) (string, error) {
+	dataSourceName, tableNames := parseArgs(exampleDataSourceName)
 
 	db, err := sql.Open(driverName, dataSourceName)
 	if err != nil {
 		return "", err
 	}
 
+	schemaFetcherFactory := getSchemaFetcherFactory(driverName)
 	schemaFetcher := schemaFetcherFactory(db)
 
 	dbName, err := schemaFetcher.GetDatabaseName()

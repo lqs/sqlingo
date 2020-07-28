@@ -3,68 +3,21 @@ package main
 import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
 	"os"
+	"sqlingo/generator"
 	"strings"
 )
 
-func printUsageAndExit() {
-	cmd := os.Args[0]
-	_, _ = fmt.Fprintf(os.Stderr, `Usage:
-	%s [-t table1,table2,...] [driverName] dataSourceName
-Example:
-	%s mysql "username:password@tcp(hostname:3306)/database"
-	%s sqlite3 ./testdb.sqlite3
-`, cmd, cmd, cmd)
-	os.Exit(1)
-}
-
-func parseArgs() (driverName string, dataSourceName string, tableNames []string) {
-	var args []string
-	parseTable := false
-	for _, arg := range os.Args[1:] {
-		if arg != "" && arg[0] == '-' {
-			switch arg[1:] {
-			case "t":
-				if parseTable {
-					printUsageAndExit()
-				}
-				parseTable = true
-			default:
-				printUsageAndExit()
-			}
-		} else {
-			if parseTable {
-				tableNames = append(tableNames, strings.Split(arg, ",")...)
-				parseTable = false
-			} else {
-				args = append(args, arg)
-			}
-		}
-	}
-	if parseTable {
-		// "-t" not closed
-		printUsageAndExit()
-	}
-
-	switch len(args) {
-	case 1:
-		driverName = "mysql"
-		dataSourceName = args[0]
-	case 2:
-		driverName = args[0]
-		dataSourceName = args[1]
-	default:
-		printUsageAndExit()
-	}
-
-	return
-}
-
 func main() {
-	driverName, dataSourceName, tableNames := parseArgs()
-	code, err := generate(driverName, dataSourceName, tableNames)
+	warningLines := []string{
+		"\u001b[31mThis command is deprecated. Please install the new generator with the corresponding driver:",
+		"go get -u github.com/lqs/sqlingo/sqlingo-gen-mysql",
+		"go get -u github.com/lqs/sqlingo/sqlingo-gen-sqlite3",
+		"go get -u github.com/lqs/sqlingo/sqlingo-gen-postgres",
+		"\u001b[0m",
+	}
+	_, _ = fmt.Fprintln(os.Stderr, strings.Join(warningLines, "\n"))
+	code, err := generator.Generate("mysql", "username:password@tcp(hostname:3306)/database")
 	if err != nil {
 		panic(err)
 	}
