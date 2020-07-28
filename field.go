@@ -10,16 +10,19 @@ type Field interface {
 
 // NumberField is the interface of a generated field of number type.
 type NumberField interface {
+	Field
 	NumberExpression
 }
 
 // BooleanField is the interface of a generated field of boolean type.
 type BooleanField interface {
+	Field
 	BooleanExpression
 }
 
 // StringField is the interface of a generated field of string type.
 type StringField interface {
+	Field
 	StringExpression
 }
 
