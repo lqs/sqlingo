@@ -18,11 +18,11 @@ const (
 type schemaFetcher interface {
 	GetDatabaseName() (dbName string, err error)
 	GetTableNames() (tableNames []string, err error)
-	GetFieldDescriptors(tableName string) ([]FieldDescriptor, error)
+	GetFieldDescriptors(tableName string) ([]fieldDescriptor, error)
 	QuoteIdentifier(identifier string) string
 }
 
-type FieldDescriptor struct {
+type fieldDescriptor struct {
 	Name      string
 	Type      string
 	Size      int
@@ -48,7 +48,7 @@ func convertCase(s string) (result string) {
 	return
 }
 
-func getType(fieldDescriptor FieldDescriptor) (goType string, fieldClass string, err error) {
+func getType(fieldDescriptor fieldDescriptor) (goType string, fieldClass string, err error) {
 	switch strings.ToLower(fieldDescriptor.Type) {
 	case "tinyint":
 		goType = "int8"
