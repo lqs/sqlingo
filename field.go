@@ -5,24 +5,38 @@ import "strings"
 // Field is the interface of a generated field.
 type Field interface {
 	Expression
+	GetTable() Table
 }
 
 // NumberField is the interface of a generated field of number type.
 type NumberField interface {
+	Field
 	NumberExpression
 }
 
 // BooleanField is the interface of a generated field of boolean type.
 type BooleanField interface {
+	Field
 	BooleanExpression
 }
 
 // StringField is the interface of a generated field of string type.
 type StringField interface {
+	Field
 	StringExpression
 }
 
-func newFieldExpression(tableName string, fieldName string) expression {
+type actualField struct {
+	expression
+	table Table
+}
+
+func (f actualField) GetTable() Table {
+	return f.table
+}
+
+func newField(table Table, fieldName string) actualField {
+	tableName := table.GetName()
 	tableNameSqlArray := quoteIdentifier(tableName)
 	fieldNameSqlArray := quoteIdentifier(fieldName)
 
@@ -31,33 +45,36 @@ func newFieldExpression(tableName string, fieldName string) expression {
 		fullFieldNameSqlArray[dialect] = tableNameSqlArray[dialect] + "." + fieldNameSqlArray[dialect]
 	}
 
-	return expression{
-		builder: func(scope scope) (string, error) {
-			dialect := dialectUnknown
-			if scope.Database != nil {
-				dialect = scope.Database.dialect
-			}
-			if len(scope.Tables) != 1 || scope.lastJoin != nil || scope.Tables[0].GetName() != tableName {
-				return fullFieldNameSqlArray[dialect], nil
-			}
-			return fieldNameSqlArray[dialect], nil
+	return actualField{
+		expression: expression{
+			builder: func(scope scope) (string, error) {
+				dialect := dialectUnknown
+				if scope.Database != nil {
+					dialect = scope.Database.dialect
+				}
+				if len(scope.Tables) != 1 || scope.lastJoin != nil || scope.Tables[0].GetName() != tableName {
+					return fullFieldNameSqlArray[dialect], nil
+				}
+				return fieldNameSqlArray[dialect], nil
+			},
 		},
+		table: table,
 	}
 }
 
 // NewNumberField creates a reference to a number field. It should only be called from generated code.
-func NewNumberField(tableName string, fieldName string) NumberField {
-	return newFieldExpression(tableName, fieldName)
+func NewNumberField(table Table, fieldName string) NumberField {
+	return newField(table, fieldName)
 }
 
 // NewBooleanField creates a reference to a boolean field. It should only be called from generated code.
-func NewBooleanField(tableName string, fieldName string) BooleanField {
-	return newFieldExpression(tableName, fieldName)
+func NewBooleanField(table Table, fieldName string) BooleanField {
+	return newField(table, fieldName)
 }
 
 // NewStringField creates a reference to a string field. It should only be called from generated code.
-func NewStringField(tableName string, fieldName string) StringField {
-	return newFieldExpression(tableName, fieldName)
+func NewStringField(table Table, fieldName string) StringField {
+	return newField(table, fieldName)
 }
 
 type fieldList []Field

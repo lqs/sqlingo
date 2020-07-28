@@ -104,6 +104,10 @@ type expression struct {
 	isFalse  bool
 }
 
+func (e expression) GetTable() Table {
+	return nil
+}
+
 type scope struct {
 	Database *database
 	Tables   []Table

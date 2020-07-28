@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+const (
+	// SqlingoRuntimeVersion is the the runtime version of sqlingo
+	SqlingoRuntimeVersion = 2
+)
+
 // Model is the interface of generated model struct
 type Model interface {
 	GetTable() Table

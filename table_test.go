@@ -10,7 +10,7 @@ func TestTable(t *testing.T) {
 }
 
 func TestDerivedTable(t *testing.T) {
-	dummyFields := []Field{NewNumberField("table", "field")}
+	dummyFields := []Field{NewNumberField(NewTable("table"), "field")}
 	dt := derivedTable{
 		name: "t",
 		selectStatus: selectStatus{

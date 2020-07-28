@@ -11,6 +11,10 @@ import (
 	"unicode"
 )
 
+const (
+	sqlingoGeneratorVersion = 2
+)
+
 type schemaFetcher interface {
 	GetDatabaseName() (dbName string, err error)
 	GetTableNames() (tableNames []string, err error)
@@ -128,6 +132,12 @@ func generate(driverName string, dataSourceName string, tableNames []string) (st
 	code += "package " + dbName + "_dsl\n"
 	code += "import . \"github.com/lqs/sqlingo\"\n\n"
 
+	code += "type sqlingoRuntimeAndGeneratorVersionsShouldBeTheSame uint32\n\n"
+
+	sqlingoGeneratorVersionString := strconv.Itoa(sqlingoGeneratorVersion)
+	code += "const _ = sqlingoRuntimeAndGeneratorVersionsShouldBeTheSame(SqlingoRuntimeVersion - " + sqlingoGeneratorVersionString + ")\n"
+	code += "const _ = sqlingoRuntimeAndGeneratorVersionsShouldBeTheSame(" + sqlingoGeneratorVersionString + " - SqlingoRuntimeVersion)\n\n"
+
 	code += "type table interface {\n"
 	code += "\tTable\n"
 	code += "}\n\n"
@@ -185,16 +195,17 @@ func generateTable(schemaFetcher schemaFetcher, tableName string) (string, error
 		return "", err
 	}
 
-	tableLines := ""
-	modelLines := ""
-	objectLines := "\ttable: NewTable(" + strconv.Quote(tableName) + "),\n\n"
-	fieldCaseLines := ""
-	classLines := ""
-
 	className := convertCase(tableName)
 	tableStructName := "t" + className
+	tableObjectName := "o" + className
 
 	modelClassName := className + "Model"
+
+	tableLines := ""
+	modelLines := ""
+	objectLines := "\ttable: " + tableObjectName + ",\n\n"
+	fieldCaseLines := ""
+	classLines := ""
 
 	fields := ""
 	fieldsSQL := ""
@@ -226,7 +237,7 @@ func generateTable(schemaFetcher schemaFetcher, tableName string) (string, error
 
 		objectLines += commentLine
 		objectLines += "\t" + goName + ": " + fieldStructName + "{"
-		objectLines += "New" + fieldClass + "(" + strconv.Quote(tableName) + ", " + strconv.Quote(fieldDescriptor.Name) + ")},\n"
+		objectLines += "New" + fieldClass + "(" + tableObjectName + ", " + strconv.Quote(fieldDescriptor.Name) + ")},\n"
 
 		fieldCaseLines += "\tcase " + strconv.Quote(fieldDescriptor.Name) + ": return t." + goName + "\n"
 
@@ -253,6 +264,7 @@ func generateTable(schemaFetcher schemaFetcher, tableName string) (string, error
 
 	code += classLines
 
+	code += "var " + tableObjectName + " = NewTable(" + strconv.Quote(tableName) + ")\n"
 	code += "var " + className + " = " + tableStructName + "{\n"
 	code += objectLines
 	code += "}\n\n"

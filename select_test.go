@@ -5,34 +5,36 @@ import (
 	"testing"
 )
 
-type table1 struct {
+type tTable1 struct {
 	Table
 }
 
-var Table1 = table1{
+var Table1 = tTable1{
 	NewTable("table1"),
 }
-var field1 = NewNumberField("table1", "field1")
-var field2 = NewNumberField("table1", "field2")
 
-func (t table1) GetFields() []Field {
+var table1 = NewTable("table1")
+var field1 = NewNumberField(table1, "field1")
+var field2 = NewNumberField(table1, "field2")
+
+var table2 = NewTable("table2")
+var field3 = NewNumberField(table2, "field3")
+
+func (t tTable1) GetFields() []Field {
 	return []Field{field1, field2}
 }
 
-func (t table1) GetFieldsSQL() string {
+func (t tTable1) GetFieldsSQL() string {
 	return "<fields sql>"
 }
 
-func (t table1) GetFullFieldsSQL() string {
+func (t tTable1) GetFullFieldsSQL() string {
 	return "<full fields sql>"
 }
 
 func TestSelect(t *testing.T) {
 	db := newMockDatabase()
 	assertValue(t, db.Select(1), "(SELECT 1)")
-
-	table2 := NewTable("table1")
-	field3 := NewNumberField("table2", "field1")
 
 	db.Select(field1).From(Table1).Where(field1.Equals(42)).Limit(10).GetSQL()
 
@@ -81,6 +83,16 @@ func TestCount(t *testing.T) {
 
 	_, _ = db.Select(Test.F1).From(Test).Exists()
 	assertLastSql(t, "SELECT EXISTS (SELECT `f1` FROM `test`)")
+}
+
+func TestSelectAutoFrom(t *testing.T) {
+	db := newMockDatabase()
+
+	_, _ = db.Select(field1, field2, 123).FetchFirst()
+	assertLastSql(t, "SELECT `field1`, `field2`, 123 FROM `table1`")
+
+	_, _ = db.Select(field1, field2, 123, field3).FetchFirst()
+	assertLastSql(t, "SELECT `table1`.`field1`, `table1`.`field2`, 123, `table2`.`field3` FROM `table1`, `table2`")
 }
 
 func TestFetchAll(t *testing.T) {
@@ -137,11 +149,9 @@ func TestUnion(t *testing.T) {
 	_, _ = db.SelectFrom(table1).UnionSelectFrom(table2).Where(cond1).FetchAll()
 	assertLastSql(t, "SELECT * FROM `table1` UNION SELECT * FROM `table2` WHERE <condition 1>")
 
-
 	_, _ = db.SelectFrom(table1).Where(cond1).
 		UnionSelectFrom(table2).Where(cond2).FetchAll()
 	assertLastSql(t, "SELECT * FROM `table1` WHERE <condition 1> UNION SELECT * FROM `table2` WHERE <condition 2>")
-
 
 	_, _ = db.SelectFrom(table1).Where(Raw("C1")).
 		UnionSelectFrom(table2).Where(Raw("C2")).
@@ -151,14 +161,13 @@ func TestUnion(t *testing.T) {
 		UnionAllSelect(6).From(table2).Where(Raw("C6")).
 		UnionAllSelectDistinct(7).From(table2).Where(Raw("C7")).
 		FetchAll()
-	assertLastSql(t, "SELECT * FROM `table1` WHERE C1 " +
-		"UNION SELECT * FROM `table2` WHERE C2 " +
-		"UNION SELECT 3 FROM `table2` WHERE C3 " +
-		"UNION SELECT DISTINCT 4 FROM `table2` WHERE C4 " +
-		"UNION ALL SELECT * FROM `table2` WHERE C5 " +
-		"UNION ALL SELECT 6 FROM `table2` WHERE C6 " +
+	assertLastSql(t, "SELECT * FROM `table1` WHERE C1 "+
+		"UNION SELECT * FROM `table2` WHERE C2 "+
+		"UNION SELECT 3 FROM `table2` WHERE C3 "+
+		"UNION SELECT DISTINCT 4 FROM `table2` WHERE C4 "+
+		"UNION ALL SELECT * FROM `table2` WHERE C5 "+
+		"UNION ALL SELECT 6 FROM `table2` WHERE C6 "+
 		"UNION ALL SELECT DISTINCT 7 FROM `table2` WHERE C7")
-
 
 	_, _ = db.SelectFrom(table1).Where(Raw("C1")).
 		UnionSelectFrom(table2).Where(Raw("C2")).
@@ -168,13 +177,13 @@ func TestUnion(t *testing.T) {
 		UnionAllSelect(6).From(table2).Where(Raw("C6")).
 		UnionAllSelectDistinct(7).From(table2).Where(Raw("C7")).
 		Count()
-	assertLastSql(t, "SELECT COUNT(1) FROM (" +
-		"SELECT 1 FROM `table1` WHERE C1 " +
-		"UNION SELECT * FROM `table2` WHERE C2 " +
-		"UNION SELECT 3 FROM `table2` WHERE C3 " +
-		"UNION SELECT DISTINCT 4 FROM `table2` WHERE C4 " +
-		"UNION ALL SELECT * FROM `table2` WHERE C5 " +
-		"UNION ALL SELECT 6 FROM `table2` WHERE C6 " +
-		"UNION ALL SELECT DISTINCT 7 FROM `table2` WHERE C7" +
+	assertLastSql(t, "SELECT COUNT(1) FROM ("+
+		"SELECT 1 FROM `table1` WHERE C1 "+
+		"UNION SELECT * FROM `table2` WHERE C2 "+
+		"UNION SELECT 3 FROM `table2` WHERE C3 "+
+		"UNION SELECT DISTINCT 4 FROM `table2` WHERE C4 "+
+		"UNION ALL SELECT * FROM `table2` WHERE C5 "+
+		"UNION ALL SELECT 6 FROM `table2` WHERE C6 "+
+		"UNION ALL SELECT DISTINCT 7 FROM `table2` WHERE C7"+
 		") AS t")
 }

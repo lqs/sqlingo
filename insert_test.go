@@ -24,10 +24,12 @@ type TestModel struct {
 	F2 string
 }
 
+var tTestTable = NewTable("test")
+
 var Test = tTest{
 	Table: NewTable("test"),
-	F1:    fTestF1{NewNumberField("test", "f1")},
-	F2:    fTestF2{NewStringField("test", "f2")},
+	F1:    fTestF1{NewNumberField(tTestTable, "f1")},
+	F2:    fTestF2{NewStringField(tTestTable, "f2")},
 }
 
 func (m TestModel) GetTable() Table {

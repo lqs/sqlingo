@@ -384,6 +384,21 @@ func (s selectBase) buildSelectBase(sb *strings.Builder) error {
 		sb.WriteString("DISTINCT ")
 	}
 
+	// find tables from fields if "From" is not specified
+	if len(s.scope.Tables) == 0 && len(s.fields) > 0 {
+		tableMap := make(map[string]Table)
+		for _, field := range s.fields {
+			table := field.GetTable()
+			if table == nil {
+				continue
+			}
+			tableMap[table.GetName()] = table
+		}
+		for _, table := range tableMap {
+			s.scope.Tables = append(s.scope.Tables, table)
+		}
+	}
+
 	fieldsSql, err := s.fields.GetSQL(s.scope)
 	if err != nil {
 		return err
