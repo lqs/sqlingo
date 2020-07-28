@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/lqs/sqlingo/generator"
 	"os"
-	"sqlingo/generator"
 	"strings"
 )
 
