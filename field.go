@@ -10,14 +10,14 @@ type Field interface {
 
 // NumberField is the interface of a generated field of number type.
 type NumberField interface {
-	Field
 	NumberExpression
+	GetTable() Table
 }
 
 // BooleanField is the interface of a generated field of boolean type.
 type BooleanField interface {
-	Field
 	BooleanExpression
+	GetTable() Table
 }
 
 // StringField is the interface of a generated field of string type.
