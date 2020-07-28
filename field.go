@@ -22,8 +22,8 @@ type BooleanField interface {
 
 // StringField is the interface of a generated field of string type.
 type StringField interface {
-	Field
 	StringExpression
+	GetTable() Table
 }
 
 type actualField struct {
