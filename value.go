@@ -94,7 +94,15 @@ func (v value) Uint32() uint32 {
 }
 
 func (v value) Bool() bool {
-	return v.Int64() != 0
+	if v.stringValue == nil {
+		return false
+	}
+	switch *v.stringValue {
+	case "", "0", "\x00":
+		return false
+	default:
+		return true
+	}
 }
 
 func (v value) String() string {
@@ -102,4 +110,8 @@ func (v value) String() string {
 		return ""
 	}
 	return *v.stringValue
+}
+
+func (v value) IsNull() bool {
+	return v.stringValue == nil
 }

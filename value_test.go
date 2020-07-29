@@ -2,9 +2,12 @@ package sqlingo
 
 import "testing"
 
+func newValue(s string) value {
+	return value{stringValue: &s}
+}
+
 func TestValue(t *testing.T) {
-	v := "42"
-	value := value{stringValue: &v}
+	value := newValue("42")
 	if value.String() != "42" {
 		t.Error()
 	}
@@ -45,8 +48,7 @@ func TestValue(t *testing.T) {
 }
 
 func TestValueOverflow1(t *testing.T) {
-	v := "3000000000"
-	value := value{stringValue: &v}
+	value := newValue("3000000000")
 	if value.Int() != 3000000000 {
 		t.Error()
 	}
@@ -81,8 +83,7 @@ func TestValueOverflow1(t *testing.T) {
 }
 
 func TestValueOverflow2(t *testing.T) {
-	v := "3000000000000000"
-	value := value{stringValue: &v}
+	value := newValue("3000000000000000")
 	if value.Int() != 3000000000000000 {
 		t.Error()
 	}
@@ -117,12 +118,26 @@ func TestValueOverflow2(t *testing.T) {
 }
 
 func TestValueOverflow3(t *testing.T) {
-	v := "10000000000000000000"
-	value := value{stringValue: &v}
+	value := newValue("10000000000000000000")
 	if value.Int() != 0 {
 		t.Error(value.Int())
 	}
 	if value.Uint() != 10000000000000000000 {
+		t.Error()
+	}
+}
+
+func TestValueBool(t *testing.T) {
+	if !newValue("1").Bool() {
+		t.Error()
+	}
+	if newValue("0").Bool() {
+		t.Error()
+	}
+	if newValue("").Bool() {
+		t.Error()
+	}
+	if (value{}).Bool() {
 		t.Error()
 	}
 }
