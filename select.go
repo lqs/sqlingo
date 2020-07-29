@@ -386,15 +386,21 @@ func (s selectBase) buildSelectBase(sb *strings.Builder) error {
 
 	// find tables from fields if "From" is not specified
 	if len(s.scope.Tables) == 0 && len(s.fields) > 0 {
+		tableNames := make([]string, 0, len(s.fields))
 		tableMap := make(map[string]Table)
 		for _, field := range s.fields {
 			table := field.GetTable()
 			if table == nil {
 				continue
 			}
-			tableMap[table.GetName()] = table
+			tableName := table.GetName()
+			if _, ok := tableMap[tableName]; !ok {
+				tableMap[tableName] = table
+				tableNames = append(tableNames, tableName)
+			}
 		}
-		for _, table := range tableMap {
+		for _, tableName := range tableNames {
+			table := tableMap[tableName]
 			s.scope.Tables = append(s.scope.Tables, table)
 		}
 	}
