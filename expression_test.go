@@ -103,6 +103,7 @@ func TestFunc(t *testing.T) {
 	assertValue(t, e.NotIn([]int64{1, 2, 3}), "<> NOT IN (1, 2, 3)")
 
 	assertValue(t, e.Like("%A%"), "<> LIKE '%A%'")
+	assertValue(t, e.Concat("-suffix"), "CONCAT(<>, '-suffix')")
 	assertValue(t, e.Contains("\n"), "LOCATE('\\\n', <>) > 0")
 
 	assertValue(t, []interface{}{1, 2, 3, "d"}, "(1, 2, 3, 'd')")

@@ -75,6 +75,7 @@ type StringExpression interface {
 	Max() UnknownExpression
 	Like(other interface{}) BooleanExpression
 	Contains(substring string) BooleanExpression
+	Concat(other interface{}) StringExpression
 }
 
 // UnknownExpression is the interface of a SQL expression with unknown value.
@@ -435,6 +436,10 @@ func (e expression) Max() UnknownExpression {
 
 func (e expression) Like(other interface{}) BooleanExpression {
 	return e.binaryOperation("LIKE", other, 11)
+}
+
+func (e expression) Concat(other interface{}) StringExpression {
+	return Concat(e, other)
 }
 
 func (e expression) Contains(substring string) BooleanExpression {
