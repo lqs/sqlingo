@@ -48,7 +48,7 @@ func (m *mockRows) Next(dest []driver.Value) error {
 		case 2:
 			dest[i] = m.cursorPosition
 		case 3:
-			dest[i] = string(m.cursorPosition % 2) // '\x00' or '\x01'
+			dest[i] = string(rune(m.cursorPosition % 2)) // '\x00' or '\x01'
 		case 4:
 			dest[i] = strconv.Itoa(m.cursorPosition % 2) // '0' or '1'
 		case 5:
