@@ -125,6 +125,9 @@ func (d database) QueryContext(ctx context.Context, sqlString string) (Cursor, e
 }
 
 func (d database) queryContextOnce(ctx context.Context, sqlStringWithCallerInfo string) (*sql.Rows, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	startTime := time.Now().UnixNano()
 	defer func() {
 		endTime := time.Now().UnixNano()
@@ -136,9 +139,6 @@ func (d database) queryContextOnce(ctx context.Context, sqlStringWithCallerInfo 
 	interceptor := d.interceptor
 	var rows *sql.Rows
 	invoker := func(ctx context.Context, sql string) (err error) {
-		if ctx == nil {
-			ctx = context.Background()
-		}
 		rows, err = d.getTxOrDB().QueryContext(ctx, sql)
 		return
 	}
