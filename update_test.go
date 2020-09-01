@@ -19,6 +19,20 @@ func TestUpdate(t *testing.T) {
 		Execute()
 	assertLastSql(t, "UPDATE `table1` SET `field1` = 10 WHERE `field2` = 2 ORDER BY `field1` DESC LIMIT 2")
 
+	_, _ = db.Update(Table1).
+		SetIf(true, field1, 10).
+		SetIf(false, field2, 10).
+		Where(trueExpression()).
+		Execute()
+	assertLastSql(t, "UPDATE `table1` SET `field1` = 10 WHERE 1")
+
+	if _, err := db.Update(Table1).
+		SetIf(false, field1, 10).
+		Where(trueExpression()).
+		Execute(); err == nil {
+		t.Error("should get error here")
+	}
+
 	if _, err := db.Update(Table1).Limit(3).Execute(); err == nil {
 		t.Error("should get error here")
 	}
