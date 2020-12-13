@@ -32,6 +32,7 @@ type Expression interface {
 	In(values ...interface{}) BooleanExpression
 	NotIn(values ...interface{}) BooleanExpression
 	Between(min interface{}, max interface{}) BooleanExpression
+	NotBetween(min interface{}, max interface{}) BooleanExpression
 	Desc() OrderBy
 
 	As(alias string) Alias
@@ -591,6 +592,14 @@ func (e expression) getBuilder(single booleanFunc, joiner joinerFunc, values ...
 }
 
 func (e expression) Between(min interface{}, max interface{}) BooleanExpression {
+	return e.buildBetween(" BETWEEN ", min, max)
+}
+
+func (e expression) NotBetween(min interface{}, max interface{}) BooleanExpression {
+	return e.buildBetween(" NOT BETWEEN ", min, max)
+}
+
+func (e expression) buildBetween(operator string, min interface{}, max interface{}) BooleanExpression {
 	return expression{builder: func(scope scope) (string, error) {
 		exprSql, err := e.GetSQL(scope)
 		if err != nil {
@@ -604,9 +613,8 @@ func (e expression) Between(min interface{}, max interface{}) BooleanExpression 
 		if err != nil {
 			return "", err
 		}
-		return exprSql + " BETWEEN " + minSql + " AND " + maxSql, nil
+		return exprSql + operator + minSql + " AND " + maxSql, nil
 	}, priority: 12}
-
 }
 
 func (e expression) getOperatorPriority() priority {

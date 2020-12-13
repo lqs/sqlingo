@@ -88,6 +88,7 @@ func TestFunc(t *testing.T) {
 	assertValue(t, e.Min(), "MIN(<>)")
 	assertValue(t, e.Max(), "MAX(<>)")
 	assertValue(t, e.Between(2, 4), "<> BETWEEN 2 AND 4")
+	assertValue(t, e.NotBetween(2, 4), "<> NOT BETWEEN 2 AND 4")
 
 	assertValue(t, e.In(), "0")
 	assertValue(t, e.In(1), "<> = 1")
