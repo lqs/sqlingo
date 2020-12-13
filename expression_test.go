@@ -74,6 +74,7 @@ func TestFunc(t *testing.T) {
 	assertValue(t, e.GreaterThanOrEquals(e), "<> >= <>")
 	assertValue(t, e.And(e), "<> AND <>")
 	assertValue(t, e.Or(e), "<> OR <>")
+	assertValue(t, e.Xor(e), "<> XOR <>")
 	assertValue(t, e.Not(), "NOT <>")
 
 	assertValue(t, e.Add(e), "<> + <>")

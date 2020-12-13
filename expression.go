@@ -49,6 +49,7 @@ type BooleanExpression interface {
 	Expression
 	And(other interface{}) BooleanExpression
 	Or(other interface{}) BooleanExpression
+	Xor(other interface{}) BooleanExpression
 	Not() BooleanExpression
 }
 
@@ -83,6 +84,7 @@ type UnknownExpression interface {
 	Expression
 	And(other interface{}) BooleanExpression
 	Or(other interface{}) BooleanExpression
+	Xor(other interface{}) BooleanExpression
 	Not() BooleanExpression
 	Add(other interface{}) NumberExpression
 	Sub(other interface{}) NumberExpression
@@ -392,6 +394,10 @@ func (e expression) Or(other interface{}) BooleanExpression {
 		}
 	}
 	return e.binaryOperation("OR", other, 16)
+}
+
+func (e expression) Xor(other interface{}) BooleanExpression {
+	return e.binaryOperation("XOR", other, 15)
 }
 
 func (e expression) Add(other interface{}) NumberExpression {
