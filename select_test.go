@@ -132,6 +132,11 @@ func TestFetchAll(t *testing.T) {
 	if _, err := db.Select(field1).From(Table1).FetchAll(&unsupported); err == nil {
 		t.Error("should get error here")
 	}
+
+	// fetch all for non-pointer
+	if _, err := db.Select(field1).From(Table1).FetchAll(123); err == nil {
+		t.Error("should get error here")
+	}
 }
 
 func TestLock(t *testing.T) {
