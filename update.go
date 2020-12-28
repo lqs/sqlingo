@@ -59,9 +59,8 @@ func (s updateStatus) Set(field Field, value interface{}) updateWithSet {
 func (s updateStatus) SetIf(condition bool, field Field, value interface{}) updateWithSet {
 	if condition {
 		return s.Set(field, value)
-	} else {
-		return s
 	}
+	return s
 }
 
 func (s updateStatus) Where(conditions ...BooleanExpression) updateWithWhere {

@@ -53,4 +53,3 @@ func parseArgs(exampleDataSourceName string) (dataSourceName string, tableNames 
 
 	return
 }
-

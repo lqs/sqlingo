@@ -119,6 +119,7 @@ func ensureIdentifier(name string) string {
 	return result
 }
 
+// Generate generates code for the given driverName.
 func Generate(driverName string, exampleDataSourceName string) (string, error) {
 	dataSourceName, tableNames := parseArgs(exampleDataSourceName)
 

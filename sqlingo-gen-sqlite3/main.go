@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/lqs/sqlingo/generator"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {
