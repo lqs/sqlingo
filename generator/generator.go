@@ -32,19 +32,27 @@ type fieldDescriptor struct {
 	Comment   string
 }
 
-func convertCase(s string) (result string) {
+func convertToExportedIdentifier(s string) (result string) {
 	nextCharShouldBeUpperCase := true
 	for _, ch := range s {
-		if ch == '_' {
-			nextCharShouldBeUpperCase = true
-		} else {
+		if unicode.IsLetter(ch) || unicode.IsDigit(ch) {
 			if nextCharShouldBeUpperCase {
 				result += string(unicode.ToUpper(ch))
 				nextCharShouldBeUpperCase = false
 			} else {
 				result += string(ch)
 			}
+		} else {
+			nextCharShouldBeUpperCase = true
 		}
+	}
+	var firstRune rune
+	for _, r := range result {
+		firstRune = r
+		break
+	}
+	if result == "" || !unicode.IsUpper(firstRune) {
+		result = "E" + result
 	}
 	return
 }
@@ -194,7 +202,7 @@ func generateGetTable(tableNames []string) string {
 	code := "func GetTable(name string) Table {\n"
 	code += "\tswitch name {\n"
 	for _, tableName := range tableNames {
-		code += "\tcase " + strconv.Quote(tableName) + ": return " + convertCase(tableName) + "\n"
+		code += "\tcase " + strconv.Quote(tableName) + ": return " + convertToExportedIdentifier(tableName) + "\n"
 	}
 	code += "\tdefault: return nil\n"
 	code += "\t}\n"
@@ -208,7 +216,7 @@ func generateTable(schemaFetcher schemaFetcher, tableName string) (string, error
 		return "", err
 	}
 
-	className := convertCase(tableName)
+	className := convertToExportedIdentifier(tableName)
 	tableStructName := "t" + className
 	tableObjectName := "o" + className
 
@@ -227,7 +235,7 @@ func generateTable(schemaFetcher schemaFetcher, tableName string) (string, error
 
 	for _, fieldDescriptor := range fieldDescriptors {
 
-		goName := convertCase(fieldDescriptor.Name)
+		goName := convertToExportedIdentifier(fieldDescriptor.Name)
 		goType, fieldClass, err := getType(fieldDescriptor)
 		if err != nil {
 			return "", err
