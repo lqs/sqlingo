@@ -54,6 +54,17 @@ func TestInsert(t *testing.T) {
 		" VALUES (1), (2)"+
 		" ON DUPLICATE KEY UPDATE `field1` = 10")
 
+	if _, err := db.InsertInto(Table1).Fields(field1).
+		Values(1).
+		Values(2).
+		OnDuplicateKeyIgnore().
+		Execute(); err != nil {
+		t.Error(err)
+	}
+	assertLastSql(t, "INSERT INTO `table1` (`field1`)"+
+		" VALUES (1), (2)"+
+		" ON DUPLICATE KEY UPDATE `field1` = `field1`")
+
 	model := &TestModel{
 		F1: 1,
 		F2: "test",

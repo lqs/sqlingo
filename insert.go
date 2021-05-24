@@ -23,17 +23,17 @@ type insertWithTable interface {
 }
 
 type insertWithValues interface {
+	toInsertFinal
 	Values(values ...interface{}) insertWithValues
+	OnDuplicateKeyIgnore() toInsertFinal
 	OnDuplicateKeyUpdate() insertWithOnDuplicateKeyUpdateBegin
-	GetSQL() (string, error)
-	Execute() (result sql.Result, err error)
 }
 
 type insertWithModels interface {
+	toInsertFinal
 	Models(models ...interface{}) insertWithModels
+	OnDuplicateKeyIgnore() toInsertFinal
 	OnDuplicateKeyUpdate() insertWithOnDuplicateKeyUpdateBegin
-	GetSQL() (string, error)
-	Execute() (result sql.Result, err error)
 }
 
 type insertWithOnDuplicateKeyUpdateBegin interface {
@@ -41,7 +41,11 @@ type insertWithOnDuplicateKeyUpdateBegin interface {
 }
 
 type insertWithOnDuplicateKeyUpdate interface {
+	toInsertFinal
 	Set(Field Field, value interface{}) insertWithOnDuplicateKeyUpdate
+}
+
+type toInsertFinal interface {
 	GetSQL() (string, error)
 	Execute() (result sql.Result, err error)
 }
@@ -107,6 +111,11 @@ func (s insertStatus) Set(field Field, value interface{}) insertWithOnDuplicateK
 		value: value,
 	})
 	return s
+}
+
+func (s insertStatus) OnDuplicateKeyIgnore() toInsertFinal {
+	firstField := s.scope.Tables[0].GetFields()[0]
+	return s.OnDuplicateKeyUpdate().Set(firstField, firstField)
 }
 
 func (s insertStatus) GetSQL() (string, error) {
