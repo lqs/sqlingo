@@ -38,7 +38,9 @@ func preparePointers(val reflect.Value, scans *[]interface{}) error {
 			if field.Kind() == reflect.Interface {
 				continue
 			}
-			*scans = append(*scans, field.Addr().Interface())
+			if err := preparePointers(field, scans); err != nil {
+				return err
+			}
 		}
 	case reflect.Ptr:
 		toType := val.Type().Elem()

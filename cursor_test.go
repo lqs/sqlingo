@@ -84,8 +84,10 @@ func TestCursor(t *testing.T) {
 	var b string
 
 	var cde struct {
-		C    float32
-		D, E bool
+		C  float32
+		DE struct {
+			D, E bool
+		}
 	}
 	var f ****int // deep pointer
 	var g *int    // always null
@@ -101,11 +103,11 @@ func TestCursor(t *testing.T) {
 		if a != i ||
 			b != strconv.Itoa(i) ||
 			cde.C != float32(i) ||
-			cde.D != (i%2 == 1) ||
-			cde.E != cde.E ||
+			cde.DE.D != (i%2 == 1) ||
+			cde.DE.E != cde.DE.D ||
 			****f != i ||
 			g != nil {
-			t.Error(a, b, cde.C, cde.D, cde.E, ****f, g)
+			t.Error(a, b, cde.C, cde.DE.D, cde.DE.E, ****f, g)
 		}
 		if err := cursor.Scan(); err != nil {
 			t.Errorf("%v", err)
