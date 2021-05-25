@@ -203,6 +203,8 @@ func getFields(fields []interface{}) (result []Field) {
 		switch field.(type) {
 		case Field:
 			result = append(result, field.(Field))
+		case Table:
+			result = append(result, field.(Table).GetFields()...)
 		default:
 			fieldCopy := field
 			fieldExpression := expression{builder: func(scope scope) (string, error) {
