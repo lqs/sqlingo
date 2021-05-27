@@ -156,17 +156,37 @@ func (d database) queryContextOnce(ctx context.Context, sqlStringWithCallerInfo 
 	return rows, nil
 }
 
-func (d database) Execute(sql string) (sql.Result, error) {
-	return d.ExecuteContext(context.Background(), sql)
+func (d database) Execute(sqlString string) (sql.Result, error) {
+	return d.ExecuteContext(context.Background(), sqlString)
 }
 
-func (d database) ExecuteContext(ctx context.Context, sql string) (sql.Result, error) {
-	sql = getCallerInfo(d, false) + sql
-	startTime := time.Now().UnixNano()
-	result, err := d.getTxOrDB().ExecContext(ctx, sql)
-	endTime := time.Now().UnixNano()
-	if d.logger != nil {
-		d.logger(sql, endTime-startTime)
+func (d database) ExecuteContext(ctx context.Context, sqlString string) (sql.Result, error) {
+	if ctx == nil {
+		ctx = context.Background()
 	}
+	sqlStringWithCallerInfo := getCallerInfo(d, false) + sqlString
+	startTime := time.Now().UnixNano()
+	defer func() {
+		endTime := time.Now().UnixNano()
+		if d.logger != nil {
+			d.logger(sqlStringWithCallerInfo, endTime-startTime)
+		}
+	}()
+
+	var result sql.Result
+	invoker := func(ctx context.Context, sql string) (err error) {
+		result, err = d.getTxOrDB().ExecContext(ctx, sql)
+		return
+	}
+	var err error
+	if d.interceptor == nil {
+		err = invoker(ctx, sqlStringWithCallerInfo)
+	} else {
+		err = d.interceptor(ctx, sqlStringWithCallerInfo, invoker)
+	}
+	if err != nil {
+		return nil, err
+	}
+
 	return result, err
 }
