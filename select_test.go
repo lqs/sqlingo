@@ -101,6 +101,40 @@ func TestSelectAutoFrom(t *testing.T) {
 	assertLastSql(t, "SELECT `table1`.`field1`, `table1`.`field2`, 123, `table2`.`field3` FROM `table1`, `table2`")
 }
 
+func TestFetch(t *testing.T) {
+	db := newMockDatabase()
+	defer func() {
+		sharedMockConn.columnCount = 7
+		sharedMockConn.rowCount = 10
+	}()
+
+	sharedMockConn.columnCount = 2
+
+	_ = db
+	var f1 string
+	var f2 int
+
+	ok, err := db.Select(field1, field2).From(Table1).FetchFirst(&f1, &f2)
+	if !ok || err != nil {
+		t.Error()
+	}
+
+	if err := db.Select(field1, field2).From(Table1).FetchExactlyOne(&f1, &f2); err == nil {
+		t.Error("should get error")
+	}
+
+	sharedMockConn.rowCount = 1
+	if err := db.Select(field1, field2).From(Table1).FetchExactlyOne(&f1, &f2); err != nil {
+		t.Error(err)
+	}
+
+	sharedMockConn.rowCount = 0
+	if err := db.Select(field1, field2).From(Table1).FetchExactlyOne(&f1, &f2); err == nil {
+		t.Error("should get error")
+	}
+
+}
+
 func TestFetchAll(t *testing.T) {
 	db := newMockDatabase()
 
@@ -112,7 +146,7 @@ func TestFetchAll(t *testing.T) {
 	// fetch all as slices
 	var f1s []string
 	var f2s []int
-	if _, err := db.Select(field1).From(Table1).FetchAll(&f1s, &f2s); err != nil {
+	if _, err := db.Select(field1, field2).From(Table1).FetchAll(&f1s, &f2s); err != nil {
 		t.Error(err)
 	}
 	if len(f1s) != 10 || len(f2s) != 10 {

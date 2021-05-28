@@ -15,15 +15,18 @@ type mockConn struct {
 	beginTxError error
 	prepareError error
 	columnCount  int
+	rowCount     int
 }
 
 type mockStmt struct {
 	columnCount int
+	rowCount    int
 }
 
 type mockRows struct {
 	columnCount    int
 	cursorPosition int
+	rowCount       int
 }
 
 func (m mockRows) Columns() []string {
@@ -35,7 +38,7 @@ func (m mockRows) Close() error {
 }
 
 func (m *mockRows) Next(dest []driver.Value) error {
-	if m.cursorPosition >= 10 {
+	if m.cursorPosition >= m.rowCount {
 		return io.EOF
 	}
 	m.cursorPosition++
@@ -73,7 +76,10 @@ func (m mockStmt) Exec(args []driver.Value) (driver.Result, error) {
 }
 
 func (m mockStmt) Query(args []driver.Value) (driver.Rows, error) {
-	return &mockRows{columnCount: m.columnCount}, nil
+	return &mockRows{
+		columnCount: m.columnCount,
+		rowCount:    m.rowCount,
+	}, nil
 }
 
 func TestCursor(t *testing.T) {

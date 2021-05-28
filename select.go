@@ -123,6 +123,7 @@ type toSelectFinal interface {
 	Count() (int, error)
 	GetSQL() (string, error)
 	FetchFirst(out ...interface{}) (bool, error)
+	FetchExactlyOne(out ...interface{}) error
 	FetchAll(dest ...interface{}) (rows int, err error)
 	FetchCursor() (Cursor, error)
 }
@@ -550,6 +551,30 @@ func (s selectStatus) FetchFirst(dest ...interface{}) (ok bool, err error) {
 		break
 	}
 
+	return
+}
+
+func (s selectStatus) FetchExactlyOne(dest ...interface{}) (err error) {
+	cursor, err := s.FetchCursor()
+	if err != nil {
+		return
+	}
+	defer cursor.Close()
+
+	hasResult := false
+	for cursor.Next() {
+		if hasResult {
+			return errors.New("more than one rows")
+		}
+		err = cursor.Scan(dest...)
+		if err != nil {
+			return
+		}
+		hasResult = true
+	}
+	if !hasResult {
+		err = errors.New("no rows")
+	}
 	return
 }
 
