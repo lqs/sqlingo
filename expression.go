@@ -311,7 +311,11 @@ func getSQLFromReflectValue(scope scope, v reflect.Value) (sql string, priority 
 			sql = "(" + sql + ")"
 		}
 	default:
-		err = fmt.Errorf("invalid type %s", v.Kind().String())
+		if vs, ok := v.Interface().(interface{String() string}); ok {
+			sql = quoteString(vs.String())
+		} else {
+			err = fmt.Errorf("invalid type %s", v.Kind().String())
+		}
 	}
 	return
 }
