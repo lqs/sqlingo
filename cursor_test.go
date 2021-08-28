@@ -122,8 +122,14 @@ func TestCursor(t *testing.T) {
 		var s string
 		var b ****bool
 		var p *string
-		if err := cursor.Scan(&s, &s, &s, &b, &s, &s, &p); err != nil {
+		var bs []byte
+		if err := cursor.Scan(&s, &s, &s, &b, &s, &bs, &p); err != nil {
 			t.Error(err)
+		}
+		if ****b != (i%2 == 1) ||
+			p != nil ||
+			string(bs) != strconv.Itoa(i) {
+			t.Error(s, ****b, p, string(bs))
 		}
 	}
 	if cursor.Next() {

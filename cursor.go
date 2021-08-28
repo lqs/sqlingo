@@ -59,6 +59,12 @@ func preparePointers(val reflect.Value, scans *[]interface{}) error {
 				return nil
 			}
 		}
+	case reflect.Slice:
+		if _, ok := (val.Interface()).([]byte); ok {
+			*scans = append(*scans, val.Addr().Interface())
+		} else {
+			return fmt.Errorf("unknown type []%s", val.Type().Elem().Kind().String())
+		}
 	default:
 		return fmt.Errorf("unknown type %s", kind.String())
 	}
