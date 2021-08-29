@@ -207,6 +207,15 @@ func generateGetTable(tableNames []string) string {
 	code += "\tdefault: return nil\n"
 	code += "\t}\n"
 	code += "}\n\n"
+
+	code += "func GetTables() []sqlingo.Table {\n"
+	code += "\treturn []sqlingo.Table{\n"
+	for _, tableName := range tableNames {
+		code += "\t" + convertToExportedIdentifier(tableName) + ",\n"
+	}
+	code += "\t}"
+	code += "}\n\n"
+
 	return code
 }
 
