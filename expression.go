@@ -8,7 +8,7 @@ import (
 
 type priority uint8
 
-// Expression is the interface of a SQL expression.
+// Expression is the interface of an SQL expression.
 type Expression interface {
 	// get the SQL string
 	GetSQL(scope scope) (string, error)
@@ -45,7 +45,7 @@ type Alias interface {
 	GetSQL(scope scope) (string, error)
 }
 
-// BooleanExpression is the interface of a SQL expression with boolean value.
+// BooleanExpression is the interface of an SQL expression with boolean value.
 type BooleanExpression interface {
 	Expression
 	And(other interface{}) BooleanExpression
@@ -54,7 +54,7 @@ type BooleanExpression interface {
 	Not() BooleanExpression
 }
 
-// NumberExpression is the interface of a SQL expression with number value.
+// NumberExpression is the interface of an SQL expression with number value.
 type NumberExpression interface {
 	Expression
 	Add(other interface{}) NumberExpression
@@ -70,7 +70,7 @@ type NumberExpression interface {
 	Max() UnknownExpression
 }
 
-// StringExpression is the interface of a SQL expression with string value.
+// StringExpression is the interface of an SQL expression with string value.
 type StringExpression interface {
 	Expression
 	Min() UnknownExpression
@@ -80,7 +80,7 @@ type StringExpression interface {
 	Concat(other interface{}) StringExpression
 }
 
-// UnknownExpression is the interface of a SQL expression with unknown value.
+// UnknownExpression is the interface of an SQL expression with unknown value.
 type UnknownExpression interface {
 	Expression
 	And(other interface{}) BooleanExpression
@@ -311,7 +311,7 @@ func getSQLFromReflectValue(scope scope, v reflect.Value) (sql string, priority 
 			sql = "(" + sql + ")"
 		}
 	default:
-		if vs, ok := v.Interface().(interface{String() string}); ok {
+		if vs, ok := v.Interface().(interface{ String() string }); ok {
 			sql = quoteString(vs.String())
 		} else {
 			err = fmt.Errorf("invalid type %s", v.Kind().String())
