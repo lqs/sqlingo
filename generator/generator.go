@@ -81,6 +81,9 @@ func getType(fieldDescriptor fieldDescriptor) (goType string, fieldClass string,
 		// TODO: use []byte ?
 		goType = "string"
 		fieldClass = "StringField"
+	case "geometry", "point", "linestring", "polygon", "multipoint", "multilinestring", "multipolygon", "geometrycollection":
+		goType = "sqlingo.WellKnownBinary"
+		fieldClass = "WellKnownBinaryField"
 	case "bit":
 		if fieldDescriptor.Size == 1 {
 			goType = "bool"
