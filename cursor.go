@@ -31,7 +31,9 @@ func preparePointers(val reflect.Value, scans *[]interface{}) error {
 		reflect.Uint, reflect.Uint8, reflect.Uint32, reflect.Uint64,
 		reflect.Float32, reflect.Float64,
 		reflect.String:
-		*scans = append(*scans, val.Addr().Interface())
+		if addr := val.Addr(); addr.CanInterface() {
+			*scans = append(*scans, addr.Interface())
+		}
 	case reflect.Struct:
 		for j := 0; j < val.NumField(); j++ {
 			field := val.Field(j)

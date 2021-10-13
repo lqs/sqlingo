@@ -153,6 +153,20 @@ func TestFetchAll(t *testing.T) {
 		t.Error(f1s, f2s)
 	}
 
+	type record struct {
+		unexportedF1 string
+		ExportedF1   string
+		unexportedF2 int
+		ExportedF2   int
+	}
+	var records []record
+	if _, err := db.Select(field1, field2).From(Table1).FetchAll(&records); err != nil {
+		t.Error(err)
+	}
+	if len(records) != 10 {
+		t.Error(records)
+	}
+
 	// fetch all as map
 	var m map[string]int
 	if _, err := db.Select(field1).From(Table1).FetchAll(&m); err != nil {
