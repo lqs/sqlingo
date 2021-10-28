@@ -21,7 +21,7 @@ func (d *database) Update(table Table) updateWithSet {
 
 type updateWithSet interface {
 	Set(Field Field, value interface{}) updateWithSet
-	SetIf(condition bool, Field Field, value interface{}) updateWithSet
+	SetIf(prerequisite bool, Field Field, value interface{}) updateWithSet
 	Where(conditions ...BooleanExpression) updateWithWhere
 	OrderBy(orderBys ...OrderBy) updateWithOrder
 	Limit(limit int) updateWithLimit
@@ -56,8 +56,8 @@ func (s updateStatus) Set(field Field, value interface{}) updateWithSet {
 	return s
 }
 
-func (s updateStatus) SetIf(condition bool, field Field, value interface{}) updateWithSet {
-	if condition {
+func (s updateStatus) SetIf(prerequisite bool, field Field, value interface{}) updateWithSet {
+	if prerequisite {
 		return s.Set(field, value)
 	}
 	return s

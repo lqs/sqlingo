@@ -21,6 +21,7 @@ type selectWithTables interface {
 	toSelectFinal
 	toUnionSelect
 	Where(conditions ...BooleanExpression) selectWithWhere
+	WhereIf(prerequisite bool, conditions ...BooleanExpression) selectWithWhere
 	GroupBy(expressions ...Expression) selectWithGroupBy
 	OrderBy(orderBys ...OrderBy) selectWithOrder
 	Limit(limit int) selectWithLimit
@@ -42,6 +43,7 @@ type selectWithJoinOn interface {
 	toSelectFinal
 	toUnionSelect
 	Where(conditions ...BooleanExpression) selectWithWhere
+	WhereIf(prerequisite bool, conditions ...BooleanExpression) selectWithWhere
 	GroupBy(expressions ...Expression) selectWithGroupBy
 	OrderBy(orderBys ...OrderBy) selectWithOrder
 	Limit(limit int) selectWithLimit
@@ -262,6 +264,13 @@ func (d *database) SelectDistinct(fields ...interface{}) selectWithFields {
 
 func (s selectStatus) Where(conditions ...BooleanExpression) selectWithWhere {
 	s.activeSelectBase().where = And(conditions...)
+	return s
+}
+
+func (s selectStatus) WhereIf(prerequisite bool, conditions ...BooleanExpression) selectWithWhere {
+	if prerequisite {
+		s.activeSelectBase().where = And(conditions...)
+	}
 	return s
 }
 
