@@ -36,14 +36,7 @@ func TestSelect(t *testing.T) {
 	db := newMockDatabase()
 	assertValue(t, db.Select(1), "(SELECT 1)")
 
-	db.Select(field1).From(Table1).Where(field1.Equals(42)).Limit(10).FetchFirst()
-	assertLastSql(t, "SELECT `field1` FROM `table1` WHERE `field1` = 42 LIMIT 10")
-
-	db.Select(field1).From(Table1).WhereIf(true, field1.Equals(42)).Limit(10).FetchFirst()
-	assertLastSql(t, "SELECT `field1` FROM `table1` WHERE `field1` = 42 LIMIT 10")
-
-	db.Select(field1).From(Table1).WhereIf(false, field1.Equals(42)).Limit(10).FetchFirst()
-	assertLastSql(t, "SELECT `field1` FROM `table1` LIMIT 10")
+	db.Select(field1).From(Table1).Where(field1.Equals(42)).Limit(10).GetSQL()
 
 	db.Select(field1, field2, field3, Count(1).As("count")).
 		From(Table1, table2).
