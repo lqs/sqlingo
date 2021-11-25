@@ -38,11 +38,13 @@ type insertWithModels interface {
 
 type insertWithOnDuplicateKeyUpdateBegin interface {
 	Set(Field Field, value interface{}) insertWithOnDuplicateKeyUpdate
+	SetIf(condition bool, Field Field, value interface{}) insertWithOnDuplicateKeyUpdate
 }
 
 type insertWithOnDuplicateKeyUpdate interface {
 	toInsertFinal
 	Set(Field Field, value interface{}) insertWithOnDuplicateKeyUpdate
+	SetIf(condition bool, Field Field, value interface{}) insertWithOnDuplicateKeyUpdate
 }
 
 type toInsertFinal interface {
@@ -101,6 +103,13 @@ func (s insertStatus) Models(models ...interface{}) insertWithModels {
 }
 
 func (s insertStatus) OnDuplicateKeyUpdate() insertWithOnDuplicateKeyUpdateBegin {
+	return s
+}
+
+func (s insertStatus) SetIf(condition bool, field Field, value interface{}) insertWithOnDuplicateKeyUpdate {
+	if condition {
+		return s.Set(field, value)
+	}
 	return s
 }
 
