@@ -56,6 +56,40 @@ func TestInsert(t *testing.T) {
 
 	if _, err := db.InsertInto(Table1).Fields(field1).
 		Values(1).
+		OnDuplicateKeyUpdate().
+		SetIf(false, field1, 2).
+		Execute(); err != nil {
+		t.Error(err)
+	}
+	assertLastSql(t, "INSERT INTO `table1` (`field1`)"+
+		" VALUES (1)")
+
+	if _, err := db.InsertInto(Table1).Fields(field1).
+		Values(0).
+		OnDuplicateKeyUpdate().
+		SetIf(true, field1, 1).
+		Execute(); err != nil {
+		t.Error(err)
+	}
+	assertLastSql(t, "INSERT INTO `table1` (`field1`)"+
+		" VALUES (0)"+
+		" ON DUPLICATE KEY UPDATE `field1` = 1")
+
+	if _, err := db.InsertInto(Table1).
+		Fields(field1, field2).
+		Values(1, 2).
+		OnDuplicateKeyUpdate().
+		SetIf(false, field1, 10).
+		SetIf(true, field2, 20).
+		Execute(); err != nil {
+		t.Error(err)
+	}
+	assertLastSql(t, "INSERT INTO `table1` (`field1`, `field2`)"+
+		" VALUES (1, 2)"+
+		" ON DUPLICATE KEY UPDATE `field2` = 20")
+
+	if _, err := db.InsertInto(Table1).Fields(field1).
+		Values(1).
 		Values(2).
 		OnDuplicateKeyIgnore().
 		Execute(); err != nil {
