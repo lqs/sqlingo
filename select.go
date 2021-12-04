@@ -3,6 +3,7 @@ package sqlingo
 import (
 	"context"
 	"errors"
+	"log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -578,11 +579,105 @@ func (s selectStatus) FetchExactlyOne(dest ...interface{}) (err error) {
 	return
 }
 
+func (s selectStatus) getRefKey(key reflect.Value) string {
+	var refKey string
+	switch reflect.ValueOf(key.Interface()).Elem().Kind() {
+	case reflect.String:
+		refKey = reflect.ValueOf(key.Interface()).Elem().String()
+	case reflect.Int:
+		refKey = strconv.FormatInt(reflect.ValueOf(key.Interface()).Elem().Int(), 10)
+	case reflect.Int8:
+		refKey = strconv.FormatInt(reflect.ValueOf(key.Interface()).Elem().Int(), 10)
+	case reflect.Int32:
+		refKey = strconv.FormatInt(reflect.ValueOf(key.Interface()).Elem().Int(), 10)
+	case reflect.Int64:
+		refKey = strconv.FormatInt(reflect.ValueOf(key.Interface()).Elem().Int(), 10)
+	case reflect.Uint:
+		refKey = strconv.FormatInt(reflect.ValueOf(key.Interface()).Elem().Int(), 10)
+	case reflect.Uint8:
+		refKey = strconv.FormatInt(reflect.ValueOf(key.Interface()).Elem().Int(), 10)
+	case reflect.Uint32:
+		refKey = strconv.FormatInt(reflect.ValueOf(key.Interface()).Elem().Int(), 10)
+	case reflect.Uint64:
+		refKey = strconv.FormatInt(reflect.ValueOf(key.Interface()).Elem().Int(), 10)
+	case reflect.Float32:
+		refKey = strconv.FormatFloat(reflect.ValueOf(key.Interface()).Elem().Float(), 'f', -1, 32)
+	case reflect.Float64:
+		refKey = strconv.FormatFloat(reflect.ValueOf(key.Interface()).Elem().Float(), 'f', -1, 64)
+	case reflect.Ptr:
+		refKey = s.getRefKey(reflect.ValueOf(key.Interface()).Elem())
+	}
+	//	log.Printf("%v  %v", refKey, reflect.ValueOf(key.Interface()).Elem().Kind())
+	return refKey
+}
+
+func (s selectStatus) fetchAllAsMapValueSlice(cursor Cursor, mapType reflect.Type, elem reflect.Value) (mapValue reflect.Value, err error) {
+	mapValue = reflect.MakeMap(mapType)
+	targetElementType := elem.Elem().Type().Elem()
+	targetElementKind := targetElementType.Kind()
+
+	if targetElementKind == reflect.Ptr {
+		targetElementType = targetElementType.Elem()
+	}
+
+	tmpArrVal := make(map[reflect.Value]reflect.Value)
+	tmpRef := make(map[string]reflect.Value)
+	for cursor.Next() {
+		key := reflect.New(mapType.Key())
+		val := reflect.New(targetElementType)
+		err = cursor.Scan(key.Interface(), val.Interface())
+		if err != nil {
+			panic(err)
+		}
+
+		tmpKey := reflect.ValueOf(key.Interface()).Elem()
+		refKey := s.getRefKey(key)
+		if tVal, ok := tmpRef[refKey]; ok {
+			tmpKey = tVal
+		} else {
+			tmpRef[refKey] = reflect.ValueOf(key.Interface()).Elem()
+		}
+
+		if arrVal, ok := tmpArrVal[tmpKey]; ok {
+			if targetElementKind == reflect.Ptr {
+				arrVal.Set(reflect.Append(arrVal, val))
+			} else {
+				arrVal.Set(reflect.Append(arrVal, val.Elem()))
+			}
+		} else {
+			// create slice
+			arrVal = reflect.Indirect(reflect.New(elem.Elem().Type()))
+			if targetElementKind == reflect.Ptr {
+				arrVal.Set(reflect.Append(arrVal, val))
+			} else {
+				arrVal.Set(reflect.Append(arrVal, val.Elem()))
+			}
+			tmpArrVal[tmpKey] = arrVal
+		}
+
+	}
+	if len(tmpArrVal) > 0 {
+		for t, v := range tmpArrVal {
+			if mapType.Key().Kind() == reflect.Ptr {
+				mapValue.SetMapIndex(t, v)
+			} else {
+				mapValue.SetMapIndex(reflect.Indirect(t), v)
+			}
+		}
+	}
+
+	return
+}
+
 func (s selectStatus) fetchAllAsMap(cursor Cursor, mapType reflect.Type) (mapValue reflect.Value, err error) {
+	elem := reflect.New(mapType.Elem())
+	log.Printf("%v", elem.Type())
+	if elem.Type().Elem().Kind() == reflect.Slice {
+		return s.fetchAllAsMapValueSlice(cursor, mapType, elem)
+	}
+
 	mapValue = reflect.MakeMap(mapType)
 	key := reflect.New(mapType.Key())
-	elem := reflect.New(mapType.Elem())
-
 	for cursor.Next() {
 		err = cursor.Scan(key.Interface(), elem.Interface())
 		if err != nil {

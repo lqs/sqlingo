@@ -173,6 +173,12 @@ func TestFetchAll(t *testing.T) {
 		t.Error(err)
 	}
 
+	var m1 map[string][]int
+	//fetch all map value is slice
+	if _, err := db.Select(field1, field2).From(Table1).FetchAll(&m1); err != nil {
+		t.Error(err)
+	}
+
 	// fetch all as multiple maps is illegal
 	if _, err := db.Select(field1).From(Table1).FetchAll(&m, &m); err == nil {
 		t.Error("should get error here")
@@ -188,6 +194,7 @@ func TestFetchAll(t *testing.T) {
 	if _, err := db.Select(field1).From(Table1).FetchAll(123); err == nil {
 		t.Error("should get error here")
 	}
+
 }
 
 func TestLock(t *testing.T) {
