@@ -78,6 +78,8 @@ type StringExpression interface {
 	Like(other interface{}) BooleanExpression
 	Contains(substring string) BooleanExpression
 	Concat(other interface{}) StringExpression
+	IfEmpty(altValue interface{}) StringExpression
+	IsEmpty() BooleanExpression
 }
 
 // UnknownExpression is the interface of an SQL expression with unknown value.
@@ -102,6 +104,8 @@ type UnknownExpression interface {
 	Like(other interface{}) BooleanExpression
 	Contains(substring string) BooleanExpression
 	Concat(other interface{}) StringExpression
+	IfEmpty(altValue interface{}) StringExpression
+	IsEmpty() BooleanExpression
 }
 
 type expression struct {
