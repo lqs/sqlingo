@@ -26,7 +26,7 @@ func Count(arg interface{}) NumberExpression {
 }
 
 // If creates an expression of IF function.
-func If(predicate Expression, trueValue interface{}, falseValue interface{}) (result Expression) {
+func If(predicate Expression, trueValue interface{}, falseValue interface{}) (result UnknownExpression) {
 	return function("IF", predicate, trueValue, falseValue)
 }
 

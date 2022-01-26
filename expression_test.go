@@ -113,6 +113,8 @@ func TestFunc(t *testing.T) {
 	assertValue(t, e.IsNull(), "<> IS NULL")
 	assertValue(t, e.IsNotNull(), "<> IS NOT NULL")
 	assertValue(t, e.IfNull(3), "IFNULL(<>, 3)")
+	assertValue(t, e.IfEmpty(3), "IF(<> <> '', <>, 3)")
+	assertValue(t, e.IsEmpty(), "<> = ''")
 
 	e5 := expression{
 		builder: func(scope scope) (string, error) {
