@@ -98,6 +98,10 @@ type UnknownExpression interface {
 	Avg() NumberExpression
 	Min() UnknownExpression
 	Max() UnknownExpression
+
+	Like(other interface{}) BooleanExpression
+	Contains(substring string) BooleanExpression
+	Concat(other interface{}) StringExpression
 }
 
 type expression struct {
@@ -191,6 +195,14 @@ func (e expression) As(name string) Alias {
 
 func (e expression) IfNull(altValue interface{}) Expression {
 	return Function("IFNULL", e, altValue)
+}
+
+func (e expression) IfEmpty(altValue interface{}) StringExpression {
+	return If(e.NotEquals(""), e, altValue)
+}
+
+func (e expression) IsEmpty() BooleanExpression {
+	return e.Equals("")
 }
 
 func (e expression) GetSQL(scope scope) (string, error) {
