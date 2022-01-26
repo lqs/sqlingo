@@ -26,16 +26,14 @@ func TestUpdate(t *testing.T) {
 		Execute()
 	assertLastSql(t, "UPDATE `table1` SET `field1` = 10 WHERE 1")
 
-	if _, err := db.Update(Table1).
+	_, _ = db.Update(Table1).
 		SetIf(false, field1, 10).
 		Where(trueExpression()).
-		Execute(); err == nil {
-		t.Error("should get error here")
-	}
+		Execute()
+	assertLastSql(t, "/* UPDATE without SET clause */ DO 0")
 
-	if _, err := db.Update(Table1).Limit(3).Execute(); err == nil {
-		t.Error("should get error here")
-	}
+	_, _ = db.Update(Table1).Limit(3).Execute()
+	assertLastSql(t, "/* UPDATE without SET clause */ DO 0")
 
 	errExp := &expression{
 		builder: func(scope scope) (string, error) {

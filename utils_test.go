@@ -16,6 +16,7 @@ func assertLastSql(t *testing.T, expectedSql string) {
 	if sharedMockConn.lastSql != expectedSql {
 		t.Errorf("last sql [%s] expected [%s]", sharedMockConn.lastSql, expectedSql)
 	}
+	sharedMockConn.lastSql = ""
 }
 
 func assertError(t *testing.T, value interface{}) {

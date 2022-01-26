@@ -2,7 +2,6 @@ package sqlingo
 
 import (
 	"database/sql"
-	"errors"
 	"strconv"
 	"strings"
 )
@@ -79,15 +78,15 @@ func (s updateStatus) Limit(limit int) updateWithLimit {
 }
 
 func (s updateStatus) GetSQL() (string, error) {
+	if len(s.assignments) == 0 {
+		return "/* UPDATE without SET clause */ DO 0", nil
+	}
 	var sb strings.Builder
 	sb.Grow(128)
 
 	sb.WriteString("UPDATE ")
 	sb.WriteString(s.scope.Tables[0].GetSQL(s.scope))
 
-	if len(s.assignments) == 0 {
-		return "", errors.New("no set in update")
-	}
 	assignmentsSql, err := commaAssignments(s.scope, s.assignments)
 	if err != nil {
 		return "", err
