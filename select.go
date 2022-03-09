@@ -3,7 +3,6 @@ package sqlingo
 import (
 	"context"
 	"errors"
-	"log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -671,7 +670,6 @@ func (s selectStatus) fetchAllAsMapValueSlice(cursor Cursor, mapType reflect.Typ
 
 func (s selectStatus) fetchAllAsMap(cursor Cursor, mapType reflect.Type) (mapValue reflect.Value, err error) {
 	elem := reflect.New(mapType.Elem())
-	log.Printf("%v", elem.Type())
 	if elem.Type().Elem().Kind() == reflect.Slice {
 		return s.fetchAllAsMapValueSlice(cursor, mapType, elem)
 	}
