@@ -32,19 +32,31 @@ type fieldDescriptor struct {
 	Comment   string
 }
 
-func convertToExportedIdentifier(s string) (result string) {
+func convertToExportedIdentifier(s string, forceCases []string) string {
+	var words []string
 	nextCharShouldBeUpperCase := true
-	for _, ch := range s {
-		if unicode.IsLetter(ch) || unicode.IsDigit(ch) {
+	for _, r := range s {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
 			if nextCharShouldBeUpperCase {
-				result += string(unicode.ToUpper(ch))
+				words = append(words, "")
+				words[len(words)-1] += string(unicode.ToUpper(r))
 				nextCharShouldBeUpperCase = false
 			} else {
-				result += string(ch)
+				words[len(words)-1] += string(r)
 			}
 		} else {
 			nextCharShouldBeUpperCase = true
 		}
+	}
+	result := ""
+	for _, word := range words {
+		for _, caseWord := range forceCases {
+			if strings.EqualFold(word, caseWord) {
+				word = caseWord
+				break
+			}
+		}
+		result += word
 	}
 	var firstRune rune
 	for _, r := range result {
@@ -54,7 +66,7 @@ func convertToExportedIdentifier(s string) (result string) {
 	if result == "" || !unicode.IsUpper(firstRune) {
 		result = "E" + result
 	}
-	return
+	return result
 }
 
 func getType(fieldDescriptor fieldDescriptor) (goType string, fieldClass string, err error) {
@@ -132,9 +144,9 @@ func ensureIdentifier(name string) string {
 
 // Generate generates code for the given driverName.
 func Generate(driverName string, exampleDataSourceName string) (string, error) {
-	dataSourceName, tableNames := parseArgs(exampleDataSourceName)
+	options := parseArgs(exampleDataSourceName)
 
-	db, err := sql.Open(driverName, dataSourceName)
+	db, err := sql.Open(driverName, options.dataSourceName)
 	if err != nil {
 		return "", err
 	}
@@ -178,22 +190,22 @@ func Generate(driverName string, exampleDataSourceName string) (string, error) {
 	code += "\tsqlingo.BooleanField\n"
 	code += "}\n\n"
 
-	if len(tableNames) == 0 {
-		tableNames, err = schemaFetcher.GetTableNames()
+	if len(options.tableNames) == 0 {
+		options.tableNames, err = schemaFetcher.GetTableNames()
 		if err != nil {
 			return "", err
 		}
 	}
 
-	for _, tableName := range tableNames {
+	for _, tableName := range options.tableNames {
 		println("Generating", tableName)
-		tableCode, err := generateTable(schemaFetcher, tableName)
+		tableCode, err := generateTable(schemaFetcher, tableName, options.forceCases)
 		if err != nil {
 			return "", err
 		}
 		code += tableCode
 	}
-	code += generateGetTable(tableNames)
+	code += generateGetTable(options)
 	codeOut, err := format.Source([]byte(code))
 	if err != nil {
 		return "", err
@@ -201,11 +213,11 @@ func Generate(driverName string, exampleDataSourceName string) (string, error) {
 	return string(codeOut), nil
 }
 
-func generateGetTable(tableNames []string) string {
+func generateGetTable(options options) string {
 	code := "func GetTable(name string) sqlingo.Table {\n"
 	code += "\tswitch name {\n"
-	for _, tableName := range tableNames {
-		code += "\tcase " + strconv.Quote(tableName) + ": return " + convertToExportedIdentifier(tableName) + "\n"
+	for _, tableName := range options.tableNames {
+		code += "\tcase " + strconv.Quote(tableName) + ": return " + convertToExportedIdentifier(tableName, options.forceCases) + "\n"
 	}
 	code += "\tdefault: return nil\n"
 	code += "\t}\n"
@@ -213,8 +225,8 @@ func generateGetTable(tableNames []string) string {
 
 	code += "func GetTables() []sqlingo.Table {\n"
 	code += "\treturn []sqlingo.Table{\n"
-	for _, tableName := range tableNames {
-		code += "\t" + convertToExportedIdentifier(tableName) + ",\n"
+	for _, tableName := range options.tableNames {
+		code += "\t" + convertToExportedIdentifier(tableName, options.forceCases) + ",\n"
 	}
 	code += "\t}"
 	code += "}\n\n"
@@ -222,13 +234,13 @@ func generateGetTable(tableNames []string) string {
 	return code
 }
 
-func generateTable(schemaFetcher schemaFetcher, tableName string) (string, error) {
+func generateTable(schemaFetcher schemaFetcher, tableName string, forceCases []string) (string, error) {
 	fieldDescriptors, err := schemaFetcher.GetFieldDescriptors(tableName)
 	if err != nil {
 		return "", err
 	}
 
-	className := convertToExportedIdentifier(tableName)
+	className := convertToExportedIdentifier(tableName, forceCases)
 	tableStructName := "t" + className
 	tableObjectName := "o" + className
 
@@ -247,7 +259,7 @@ func generateTable(schemaFetcher schemaFetcher, tableName string) (string, error
 
 	for _, fieldDescriptor := range fieldDescriptors {
 
-		goName := convertToExportedIdentifier(fieldDescriptor.Name)
+		goName := convertToExportedIdentifier(fieldDescriptor.Name, forceCases)
 		goType, fieldClass, err := getType(fieldDescriptor)
 		if err != nil {
 			return "", err
