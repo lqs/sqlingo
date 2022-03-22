@@ -2,7 +2,7 @@
 
 [![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)
 [![go.dev](https://img.shields.io/badge/go.dev-reference-007d9c)](https://pkg.go.dev/github.com/lqs/sqlingo?tab=doc)
-[![Travis CI](https://travis-ci.org/lqs/sqlingo.svg?branch=master)](https://travis-ci.org/lqs/sqlingo)
+[![Travis CI](https://api.travis-ci.com/lqs/sqlingo.svg?branch=master)](https://app.travis-ci.com/github/lqs/sqlingo)
 [![Go Report Card](https://goreportcard.com/badge/github.com/lqs/sqlingo)](https://goreportcard.com/report/github.com/lqs/sqlingo)
 [![codecov](https://codecov.io/gh/lqs/sqlingo/branch/master/graph/badge.svg)](https://codecov.io/gh/lqs/sqlingo)
 [![MIT license](http://img.shields.io/badge/license-MIT-9d1f14)](http://opensource.org/licenses/MIT)
