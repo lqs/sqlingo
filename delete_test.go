@@ -20,4 +20,14 @@ func TestDelete(t *testing.T) {
 	if _, err := db.DeleteFrom(Table1).Where(errorExpression).Execute(); err == nil {
 		t.Error("should get error here")
 	}
+
+	if _, err := db.DeleteFrom(Table1).Where(Raw("#1#")).Limit(3).Execute(); err != nil {
+		t.Error(err)
+	}
+	assertLastSql(t, "DELETE FROM `table1` WHERE #1# LIMIT 3")
+
+	if _, err := db.DeleteFrom(Table1).Where(Raw("#1#")).OrderBy(Raw("#2#")).Limit(3).Execute(); err != nil {
+		t.Error(err)
+	}
+	assertLastSql(t, "DELETE FROM `table1` WHERE #1# ORDER BY #2# LIMIT 3")
 }
