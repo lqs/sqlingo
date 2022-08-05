@@ -85,11 +85,16 @@ func Open(driverName string, dataSourceName string) (db Database, err error) {
 			return
 		}
 	}
-	db = &database{
+	db = Use(driverName, sqlDB)
+	return
+}
+
+// Use an existing *sql.DB handle
+func Use(driverName string, sqlDB *sql.DB) Database {
+	return &database{
 		dialect: getDialectFromDriverName(driverName),
 		db:      sqlDB,
 	}
-	return
 }
 
 func (d database) GetDB() *sql.DB {
