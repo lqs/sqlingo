@@ -7,6 +7,7 @@ go:
   - "1.16.x"
   - "1.17.x"
   - "1.18.x"
+  - "1.19.x"
 
 script:
   - go test -race -coverprofile=coverage.txt -covermode=atomic
