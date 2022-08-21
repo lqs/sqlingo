@@ -20,6 +20,9 @@ var field2 = NewNumberField(table1, "field2")
 var table2 = NewTable("table2")
 var field3 = NewNumberField(table2, "field3")
 
+var table3 = NewTable("table3")
+var field4 = NewNumberField(table3, "field4")
+
 func (t tTable1) GetFields() []Field {
 	return []Field{field1, field2}
 }
@@ -51,9 +54,17 @@ func TestSelect(t *testing.T) {
 
 	db.SelectDistinct(field2).From(Table1).GetSQL()
 
-	db.Select(field1, field3).From(Table1).Join(table2).On(field1.Equals(field3)).GetSQL()
-	db.Select(field1, field3).From(Table1).LeftJoin(table2).On(field1.Equals(field3)).GetSQL()
-	db.Select(field1, field3).From(Table1).RightJoin(table2).On(field1.Equals(field3)).GetSQL()
+	_, _ = db.Select(field1, field3).From(Table1).Join(table2).On(field1.Equals(field3)).FetchFirst()
+	assertLastSql(t, "SELECT `table1`.`field1`, `table2`.`field3` FROM `table1` JOIN `table2` ON `table1`.`field1` = `table2`.`field3`")
+	_, _ = db.Select(field1, field3).From(Table1).LeftJoin(table2).On(field1.Equals(field3)).FetchFirst()
+	assertLastSql(t, "SELECT `table1`.`field1`, `table2`.`field3` FROM `table1` LEFT JOIN `table2` ON `table1`.`field1` = `table2`.`field3`")
+	_, _ = db.Select(field1, field3).From(Table1).RightJoin(table2).On(field1.Equals(field3)).FetchFirst()
+	assertLastSql(t, "SELECT `table1`.`field1`, `table2`.`field3` FROM `table1` RIGHT JOIN `table2` ON `table1`.`field1` = `table2`.`field3`")
+
+	_, _ = db.Select(field1, field3).From(Table1).
+		LeftJoin(table2).On(field1.Equals(field3)).
+		RightJoin(table3).On(field1.Equals(field4)).FetchFirst()
+	assertLastSql(t, "SELECT `table1`.`field1`, `table2`.`field3` FROM `table1` LEFT JOIN `table2` ON `table1`.`field1` = `table2`.`field3` RIGHT JOIN `table3` ON `table1`.`field1` = `table3`.`field4`")
 
 	db.Select(1).WithContext(context.Background())
 

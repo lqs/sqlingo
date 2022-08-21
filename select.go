@@ -41,6 +41,7 @@ type selectWithJoinOn interface {
 	toSelectWithContext
 	toSelectFinal
 	toUnionSelect
+	toSelectJoin
 	Where(conditions ...BooleanExpression) selectWithWhere
 	GroupBy(expressions ...Expression) selectWithGroupBy
 	OrderBy(orderBys ...OrderBy) selectWithOrder
@@ -431,8 +432,9 @@ func (s selectBase) buildSelectBase(sb *strings.Builder) error {
 			if err != nil {
 				return err
 			}
+			sb.WriteString(" ")
 			sb.WriteString(join.prefix)
-			sb.WriteString(" JOIN ")
+			sb.WriteString("JOIN ")
 			sb.WriteString(join.table.GetSQL(s.scope))
 			sb.WriteString(" ON ")
 			sb.WriteString(onSql)
