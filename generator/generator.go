@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"unicode"
 )
 
@@ -150,6 +152,7 @@ func Generate(driverName string, exampleDataSourceName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	db.SetMaxOpenConns(10)
 
 	schemaFetcherFactory := getSchemaFetcherFactory(driverName)
 	schemaFetcher := schemaFetcherFactory(db)
@@ -197,13 +200,37 @@ func Generate(driverName string, exampleDataSourceName string) (string, error) {
 		}
 	}
 
+	var wg sync.WaitGroup
+
+	type tableCodeItem struct {
+		code string
+		err  error
+	}
+	tableCodeMap := make(map[string]*tableCodeItem)
+	fmt.Fprintln(os.Stderr, "Generating code for tables...")
+	var counter int32
 	for _, tableName := range options.tableNames {
-		println("Generating", tableName)
-		tableCode, err := generateTable(schemaFetcher, tableName, options.forceCases)
-		if err != nil {
-			return "", err
+		wg.Add(1)
+		item := &tableCodeItem{}
+		tableCodeMap[tableName] = item
+		go func(tableName string) {
+			tableCode, err := generateTable(schemaFetcher, tableName, options.forceCases)
+			if err != nil {
+				item.err = err
+				return
+			}
+			fmt.Fprintf(os.Stderr, "Generated (%d/%d) %s\n", atomic.AddInt32(&counter, 1), len(options.tableNames), tableName)
+			item.code = tableCode
+			wg.Done()
+		}(tableName)
+	}
+	wg.Wait()
+	for _, tableName := range options.tableNames {
+		item := tableCodeMap[tableName]
+		if item.err != nil {
+			return "", item.err
 		}
-		code += tableCode
+		code += item.code
 	}
 	code += generateGetTable(options)
 	codeOut, err := format.Source([]byte(code))
