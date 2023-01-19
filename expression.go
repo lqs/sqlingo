@@ -2,7 +2,6 @@ package sqlingo
 
 import (
 	"fmt"
-	"math"
 	"reflect"
 	"strconv"
 	"unsafe"
@@ -218,7 +217,7 @@ func (e expression) GetSQL(scope scope) (string, error) {
 	return e.builder(scope)
 }
 
-var needsEscape = [math.MaxUint8]int{
+var needsEscape = [256]int{
 	0:    1,
 	'\n': 1,
 	'\r': 1,
