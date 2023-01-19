@@ -138,12 +138,14 @@ func (s insertStatus) GetSQL() (string, error) {
 			}
 		}
 
-		fields = models[0].GetTable().GetFields()
-		for _, model := range models {
-			if model.GetTable().GetName() != s.scope.Tables[0].GetName() {
-				return "", errors.New("invalid table from model")
+		if len(models) > 0 {
+			fields = models[0].GetTable().GetFields()
+			for _, model := range models {
+				if model.GetTable().GetName() != s.scope.Tables[0].GetName() {
+					return "", errors.New("invalid table from model")
+				}
+				values = append(values, model.GetValues())
 			}
-			values = append(values, model.GetValues())
 		}
 	} else {
 		if len(s.fields) == 0 {
