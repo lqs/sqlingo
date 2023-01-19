@@ -154,6 +154,10 @@ func (s insertStatus) GetSQL() (string, error) {
 		values = s.values
 	}
 
+	if len(values) == 0 {
+		return "/* INSERT without VALUES */ DO 0", nil
+	}
+
 	tableSql := s.scope.Tables[0].GetSQL(s.scope)
 	fieldsSql, err := commaFields(s.scope, fields)
 	if err != nil {
