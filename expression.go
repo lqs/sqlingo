@@ -2,8 +2,10 @@ package sqlingo
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
+	"unsafe"
 )
 
 type priority uint8
@@ -216,6 +218,16 @@ func (e expression) GetSQL(scope scope) (string, error) {
 	return e.builder(scope)
 }
 
+var needsEscape = [math.MaxUint8]int{
+	0:    1,
+	'\n': 1,
+	'\r': 1,
+	'\\': 1,
+	'\'': 1,
+	'"':  1,
+	0x1a: 1,
+}
+
 func quoteIdentifier(identifier string) (result dialectArray) {
 	for dialect := dialect(0); dialect < dialectCount; dialect++ {
 		switch dialect {
@@ -231,23 +243,24 @@ func quoteIdentifier(identifier string) (result dialectArray) {
 }
 
 func quoteString(s string) string {
-	bytes := []byte(s)
+	if s == "" {
+		return "''"
+	}
+
 	buf := make([]byte, len(s)*2+2)
 	buf[0] = '\''
 	n := 1
-
-	for _, b := range bytes {
-		switch b {
-		case 0, '\n', '\r', '\\', '\'', '"', 0x1a:
-			buf[n] = '\\'
-			n++
-		}
+	for i := 0; i < len(s); i++ {
+		b := s[i]
+		buf[n] = '\\'
+		n += needsEscape[b]
 		buf[n] = b
 		n++
 	}
 	buf[n] = '\''
 	n++
-	return string(buf[:n])
+	buf = buf[:n]
+	return *(*string)(unsafe.Pointer(&buf))
 }
 
 func getSQL(scope scope, value interface{}) (sql string, priority priority, err error) {
