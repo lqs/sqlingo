@@ -25,4 +25,4 @@ jobs:
       run: go mod init github.com/lqs/sqlingo && go mod tidy && go build -v .
 
     - name: Test
-      run: go mod init github.com/lqs/sqlingo && go mod tidy && go test -v .
+      run: go test -v .
