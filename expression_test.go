@@ -115,6 +115,8 @@ func TestFunc(t *testing.T) {
 	assertValue(t, e.IfNull(3), "IFNULL(<>, 3)")
 	assertValue(t, e.IfEmpty(3), "IF(<> <> '', <>, 3)")
 	assertValue(t, e.IsEmpty(), "<> = ''")
+	assertValue(t, e.Lower(), "LOWER(<>)")
+	assertValue(t, e.Upper(), "UPPER(<>)")
 
 	e5 := expression{
 		builder: func(scope scope) (string, error) {

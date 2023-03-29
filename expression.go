@@ -82,6 +82,8 @@ type StringExpression interface {
 	Concat(other interface{}) StringExpression
 	IfEmpty(altValue interface{}) StringExpression
 	IsEmpty() BooleanExpression
+	Lower() StringExpression
+	Upper() StringExpression
 }
 
 // UnknownExpression is the interface of an SQL expression with unknown value.
@@ -108,6 +110,8 @@ type UnknownExpression interface {
 	Concat(other interface{}) StringExpression
 	IfEmpty(altValue interface{}) StringExpression
 	IsEmpty() BooleanExpression
+	Lower() StringExpression
+	Upper() StringExpression
 }
 
 type expression struct {
@@ -213,6 +217,14 @@ func (e expression) IfEmpty(altValue interface{}) StringExpression {
 
 func (e expression) IsEmpty() BooleanExpression {
 	return e.Equals("")
+}
+
+func (e expression) Lower() StringExpression {
+	return function("LOWER", e)
+}
+
+func (e expression) Upper() StringExpression {
+	return function("UPPER", e)
 }
 
 func (e expression) GetSQL(scope scope) (string, error) {
