@@ -159,8 +159,8 @@ func TestFunc(t *testing.T) {
 }
 
 func TestMisc(t *testing.T) {
-	assertValue(t, trueExpression(), "1")
-	assertValue(t, falseExpression(), "0")
+	assertValue(t, True(), "1")
+	assertValue(t, False(), "0")
 
 	assertValue(t, command("COMMAND", staticExpression("<arg>", 0)), "COMMAND <arg>")
 
@@ -184,8 +184,8 @@ func TestLogicalExpression(t *testing.T) {
 }
 
 func TestLogicalOptimizer(t *testing.T) {
-	trueValue := trueExpression()
-	falseValue := falseExpression()
+	trueValue := True()
+	falseValue := False()
 	otherValue := staticExpression("<>", 0)
 
 	assertValue(t, trueValue.Or(trueValue), "1")

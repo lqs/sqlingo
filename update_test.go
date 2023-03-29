@@ -8,7 +8,7 @@ import (
 func TestUpdate(t *testing.T) {
 	db := newMockDatabase()
 
-	_, _ = db.Update(Table1).Set(field1, field2).Where(trueExpression()).Execute()
+	_, _ = db.Update(Table1).Set(field1, field2).Where(True()).Execute()
 	assertLastSql(t, "UPDATE `table1` SET `field1` = `field2` WHERE 1")
 
 	_, _ = db.Update(Table1).
@@ -22,13 +22,13 @@ func TestUpdate(t *testing.T) {
 	_, _ = db.Update(Table1).
 		SetIf(true, field1, 10).
 		SetIf(false, field2, 10).
-		Where(trueExpression()).
+		Where(True()).
 		Execute()
 	assertLastSql(t, "UPDATE `table1` SET `field1` = 10 WHERE 1")
 
 	_, _ = db.Update(Table1).
 		SetIf(false, field1, 10).
-		Where(trueExpression()).
+		Where(True()).
 		Execute()
 	assertLastSql(t, "/* UPDATE without SET clause */ DO 0")
 
@@ -50,7 +50,7 @@ func TestUpdate(t *testing.T) {
 
 	if _, err := db.Update(Table1).
 		Set(field1, errExp).
-		Where(trueExpression()).
+		Where(True()).
 		Execute(); err == nil {
 		t.Error("should get error here")
 	}

@@ -161,7 +161,7 @@ type unionSelectStatus struct {
 	previous *unionSelectStatus
 }
 
-func (s *selectStatus) activeSelectBase() *selectBase {
+func activeSelectBase(s *selectStatus) *selectBase {
 	if s.lastUnion != nil {
 		return &s.lastUnion.base
 	}
@@ -181,7 +181,7 @@ func (s selectStatus) RightJoin(table Table) selectWithJoin {
 }
 
 func (s selectStatus) join(prefix string, table Table) selectWithJoin {
-	base := s.activeSelectBase()
+	base := activeSelectBase(&s)
 	base.scope.lastJoin = &join{
 		previous: base.scope.lastJoin,
 		prefix:   prefix,
@@ -191,7 +191,7 @@ func (s selectStatus) join(prefix string, table Table) selectWithJoin {
 }
 
 func (s selectStatus) On(condition BooleanExpression) selectWithJoinOn {
-	base := s.activeSelectBase()
+	base := activeSelectBase(&s)
 	join := *base.scope.lastJoin
 	join.on = condition
 	base.scope.lastJoin = &join
@@ -234,7 +234,7 @@ func (d *database) Select(fields ...interface{}) selectWithFields {
 }
 
 func (s selectStatus) From(tables ...Table) selectWithTables {
-	s.activeSelectBase().scope.Tables = tables
+	activeSelectBase(&s).scope.Tables = tables
 	return s
 }
 
@@ -262,17 +262,17 @@ func (d *database) SelectDistinct(fields ...interface{}) selectWithFields {
 }
 
 func (s selectStatus) Where(conditions ...BooleanExpression) selectWithWhere {
-	s.activeSelectBase().where = And(conditions...)
+	activeSelectBase(&s).where = And(conditions...)
 	return s
 }
 
 func (s selectStatus) GroupBy(expressions ...Expression) selectWithGroupBy {
-	s.activeSelectBase().groupBys = expressions
+	activeSelectBase(&s).groupBys = expressions
 	return s
 }
 
 func (s selectStatus) Having(conditions ...BooleanExpression) selectWithGroupByHaving {
-	s.activeSelectBase().having = And(conditions...)
+	activeSelectBase(&s).having = And(conditions...)
 	return s
 }
 

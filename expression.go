@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"unsafe"
 )
 
@@ -134,14 +135,14 @@ func staticExpression(sql string, priority priority) expression {
 	}
 }
 
-func trueExpression() expression {
+func True() BooleanExpression {
 	return expression{
 		sql:    "1",
 		isTrue: true,
 	}
 }
 
-func falseExpression() expression {
+func False() BooleanExpression {
 	return expression{
 		sql:     "0",
 		isFalse: true,
@@ -159,7 +160,7 @@ func Raw(sql string) UnknownExpression {
 // And creates an expression with AND operator.
 func And(expressions ...BooleanExpression) (result BooleanExpression) {
 	if len(expressions) == 0 {
-		result = trueExpression()
+		result = True()
 		return
 	}
 	for _, condition := range expressions {
@@ -175,7 +176,7 @@ func And(expressions ...BooleanExpression) (result BooleanExpression) {
 // Or creates an expression with OR operator.
 func Or(expressions ...BooleanExpression) (result BooleanExpression) {
 	if len(expressions) == 0 {
-		result = falseExpression()
+		result = False()
 		return
 	}
 	for _, condition := range expressions {
@@ -397,9 +398,9 @@ func toBooleanExpression(value interface{}) BooleanExpression {
 	case !ok:
 		return nil
 	case e.isTrue:
-		return trueExpression()
+		return True()
 	case e.isFalse:
-		return falseExpression()
+		return False()
 	default:
 		return nil
 	}
@@ -496,13 +497,28 @@ func (e expression) binaryOperation(operator string, value interface{}, priority
 		if err != nil {
 			return "", err
 		}
-		if leftPriority > priority {
-			leftSql = "(" + leftSql + ")"
+		shouldParenthesizeLeft := leftPriority > priority
+		shouldParenthesizeRight := rightPriority >= priority
+		var sb strings.Builder
+		sb.Grow(len(leftSql) + len(operator) + len(rightSql) + 6)
+		if shouldParenthesizeLeft {
+			sb.WriteByte('(')
 		}
-		if rightPriority >= priority {
-			rightSql = "(" + rightSql + ")"
+		sb.WriteString(leftSql)
+		if shouldParenthesizeLeft {
+			sb.WriteByte(')')
 		}
-		return leftSql + " " + operator + " " + rightSql, err
+		sb.WriteByte(' ')
+		sb.WriteString(operator)
+		sb.WriteByte(' ')
+		if shouldParenthesizeRight {
+			sb.WriteByte('(')
+		}
+		sb.WriteString(rightSql)
+		if shouldParenthesizeRight {
+			sb.WriteByte(')')
+		}
+		return sb.String(), nil
 	}, priority: priority}
 }
 
@@ -528,10 +544,10 @@ func (e expression) IsNull() BooleanExpression {
 
 func (e expression) Not() BooleanExpression {
 	if e.isTrue {
-		return falseExpression()
+		return False()
 	}
 	if e.isFalse {
-		return trueExpression()
+		return True()
 	}
 	return e.prefixSuffixExpression("NOT ", "", 13)
 }
@@ -569,7 +585,7 @@ func expandSliceValues(values []interface{}) (result []interface{}) {
 func (e expression) In(values ...interface{}) BooleanExpression {
 	values = expandSliceValues(values)
 	if len(values) == 0 {
-		return falseExpression()
+		return False()
 	}
 	joiner := func(exprSql, valuesSql string) string { return exprSql + " IN (" + valuesSql + ")" }
 	builder := e.getBuilder(e.Equals, joiner, values...)
@@ -579,7 +595,7 @@ func (e expression) In(values ...interface{}) BooleanExpression {
 func (e expression) NotIn(values ...interface{}) BooleanExpression {
 	values = expandSliceValues(values)
 	if len(values) == 0 {
-		return trueExpression()
+		return True()
 	}
 	joiner := func(exprSql, valuesSql string) string { return exprSql + " NOT IN (" + valuesSql + ")" }
 	builder := e.getBuilder(e.NotEquals, joiner, values...)
