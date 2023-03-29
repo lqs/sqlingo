@@ -12,7 +12,7 @@ func TestDelete(t *testing.T) {
 		},
 	}
 	db := newMockDatabase()
-	if _, err := db.DeleteFrom(Table1).Where(staticExpression("##", 1)).Execute(); err != nil {
+	if _, err := db.DeleteFrom(Table1).Where(staticExpression("##", 1, false)).Execute(); err != nil {
 		t.Error(err)
 	}
 	assertLastSql(t, "DELETE FROM `table1` WHERE ##")

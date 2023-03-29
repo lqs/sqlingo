@@ -162,10 +162,10 @@ func TestMisc(t *testing.T) {
 	assertValue(t, True(), "1")
 	assertValue(t, False(), "0")
 
-	assertValue(t, command("COMMAND", staticExpression("<arg>", 0)), "COMMAND <arg>")
+	assertValue(t, command("COMMAND", staticExpression("<arg>", 0, false)), "COMMAND <arg>")
 
-	assertValue(t, staticExpression("<expression>", 1).
-		prefixSuffixExpression("<prefix>", "<suffix>", 1), "<prefix><expression><suffix>")
+	assertValue(t, staticExpression("<expression>", 1, false).
+		prefixSuffixExpression("<prefix>", "<suffix>", 1, false), "<prefix><expression><suffix>")
 }
 
 func TestLogicalExpression(t *testing.T) {
@@ -186,7 +186,8 @@ func TestLogicalExpression(t *testing.T) {
 func TestLogicalOptimizer(t *testing.T) {
 	trueValue := True()
 	falseValue := False()
-	otherValue := staticExpression("<>", 0)
+	otherValue := staticExpression("<>", 0, false)
+	otherBoolValue := staticExpression("<>", 0, true)
 
 	assertValue(t, trueValue.Or(trueValue), "1")
 	assertValue(t, trueValue.Or(falseValue), "1")
@@ -203,4 +204,8 @@ func TestLogicalOptimizer(t *testing.T) {
 
 	assertValue(t, trueValue.And(otherValue), "1 AND <>")
 	assertValue(t, trueValue.And(123), "1 AND 123")
+	assertValue(t, falseValue.Or(otherValue), "0 OR <>")
+
+	assertValue(t, trueValue.And(otherBoolValue), "<>")
+	assertValue(t, falseValue.Or(otherBoolValue), "<>")
 }

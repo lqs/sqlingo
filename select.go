@@ -345,12 +345,12 @@ func (s selectStatus) Count() (count int, err error) {
 			}}}
 			_, err = s.FetchFirst(&count)
 		} else {
-			s.base.fields = []Field{staticExpression("COUNT(1)", 0)}
+			s.base.fields = []Field{staticExpression("COUNT(1)", 0, false)}
 			_, err = s.FetchFirst(&count)
 		}
 	} else {
 		if !s.base.distinct {
-			s.base.fields = []Field{staticExpression("1", 0)}
+			s.base.fields = []Field{staticExpression("1", 0, false)}
 		}
 		_, err = s.base.scope.Database.Select(Function("COUNT", 1)).
 			From(s.asDerivedTable("t")).

@@ -116,6 +116,7 @@ type expression struct {
 	priority priority
 	isTrue   bool
 	isFalse  bool
+	isBool   bool
 }
 
 func (e expression) GetTable() Table {
@@ -128,10 +129,11 @@ type scope struct {
 	lastJoin *join
 }
 
-func staticExpression(sql string, priority priority) expression {
+func staticExpression(sql string, priority priority, isBool bool) expression {
 	return expression{
 		sql:      sql,
 		priority: priority,
+		isBool:   isBool,
 	}
 }
 
@@ -139,6 +141,7 @@ func True() BooleanExpression {
 	return expression{
 		sql:    "1",
 		isTrue: true,
+		isBool: true,
 	}
 }
 
@@ -146,6 +149,7 @@ func False() BooleanExpression {
 	return expression{
 		sql:     "0",
 		isFalse: true,
+		isBool:  true,
 	}
 }
 
@@ -401,6 +405,8 @@ func toBooleanExpression(value interface{}) BooleanExpression {
 		return True()
 	case e.isFalse:
 		return False()
+	case e.isBool:
+		return e
 	default:
 		return nil
 	}
@@ -522,38 +528,44 @@ func (e expression) binaryOperation(operator string, value interface{}, priority
 	}, priority: priority}
 }
 
-func (e expression) prefixSuffixExpression(prefix string, suffix string, priority priority) expression {
+func (e expression) prefixSuffixExpression(prefix string, suffix string, priority priority, isBool bool) expression {
 	if e.sql != "" {
 		return expression{
 			sql:      prefix + e.sql + suffix,
 			priority: priority,
+			isBool:   isBool,
 		}
 	}
-	return expression{builder: func(scope scope) (string, error) {
-		exprSql, err := e.GetSQL(scope)
-		if err != nil {
-			return "", err
-		}
-		return prefix + exprSql + suffix, nil
-	}, priority: priority}
+	return expression{
+		builder: func(scope scope) (string, error) {
+			exprSql, err := e.GetSQL(scope)
+			if err != nil {
+				return "", err
+			}
+			return prefix + exprSql + suffix, nil
+		},
+		priority: priority,
+		isBool:   isBool,
+	}
 }
 
 func (e expression) IsNull() BooleanExpression {
-	return e.prefixSuffixExpression("", " IS NULL", 11)
+	return e.prefixSuffixExpression("", " IS NULL", 11, true)
 }
 
 func (e expression) Not() BooleanExpression {
-	if e.isTrue {
+	switch {
+	case e.isTrue:
 		return False()
-	}
-	if e.isFalse {
+	case e.isFalse:
 		return True()
+	default:
+		return e.prefixSuffixExpression("NOT ", "", 13, true)
 	}
-	return e.prefixSuffixExpression("NOT ", "", 13)
 }
 
 func (e expression) IsNotNull() BooleanExpression {
-	return e.prefixSuffixExpression("", " IS NOT NULL", 11)
+	return e.prefixSuffixExpression("", " IS NOT NULL", 11, true)
 }
 
 func expandSliceValue(value reflect.Value) (result []interface{}) {
