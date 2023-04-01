@@ -88,7 +88,7 @@ func getType(fieldDescriptor fieldDescriptor) (goType string, fieldClass string,
 	case "float", "double", "decimal", "real":
 		goType = "float64"
 		fieldClass = "NumberField"
-	case "char", "varchar", "text", "tinytext", "mediumtext", "longtext", "enum", "datetime", "date", "time", "timestamp", "json", "numeric", "character varying":
+	case "char", "varchar", "text", "tinytext", "mediumtext", "longtext", "enum", "datetime", "date", "time", "timestamp", "json", "numeric", "character varying", "array", "timestamp without time zone", "timestamp with time zone", "jsonb":
 		goType = "string"
 		fieldClass = "StringField"
 	case "binary", "varbinary", "blob", "tinyblob", "mediumblob", "longblob":
@@ -98,7 +98,7 @@ func getType(fieldDescriptor fieldDescriptor) (goType string, fieldClass string,
 	case "geometry", "point", "linestring", "polygon", "multipoint", "multilinestring", "multipolygon", "geometrycollection":
 		goType = "sqlingo.WellKnownBinary"
 		fieldClass = "WellKnownBinaryField"
-	case "bit":
+	case "bit", "bool", "boolean":
 		if fieldDescriptor.Size == 1 {
 			goType = "bool"
 			fieldClass = "BooleanField"
@@ -299,7 +299,7 @@ func generateTable(schemaFetcher schemaFetcher, tableName string, forceCases []s
 			commentLine = "\t// " + strings.ReplaceAll(fieldDescriptor.Comment, "\n", " ") + "\n"
 		}
 
-		fieldStructName := strings.ToLower(fieldDescriptor.Type) + "_" + className + "_" + goName
+		fieldStructName := strings.ToLower(replaceTypeSpace(fieldDescriptor.Type)) + "_" + className + "_" + goName
 
 		tableLines += commentLine
 		tableLines += "\t" + goName + " " + fieldStructName + "\n"
@@ -372,4 +372,10 @@ func generateTable(schemaFetcher schemaFetcher, tableName string, forceCases []s
 	code += "\treturn []interface{}{" + values + "}\n"
 	code += "}\n\n"
 	return code, nil
+}
+
+// replaceTypeSpace : To compatible some types contains spaces in postgresql
+// like [character varying, timestamp without time zone, timestamp with time zone]
+func replaceTypeSpace(typename string) string {
+	return strings.ReplaceAll(typename, " ", "_")
 }
