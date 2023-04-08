@@ -86,6 +86,10 @@ type StringExpression interface {
 	Upper() StringExpression
 }
 
+type ArrayExpression interface {
+	Expression
+}
+
 // UnknownExpression is the interface of an SQL expression with unknown value.
 type UnknownExpression interface {
 	Expression

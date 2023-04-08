@@ -88,13 +88,17 @@ func getType(fieldDescriptor fieldDescriptor) (goType string, fieldClass string,
 	case "float", "double", "decimal", "real":
 		goType = "float64"
 		fieldClass = "NumberField"
-	case "char", "varchar", "text", "tinytext", "mediumtext", "longtext", "enum", "datetime", "date", "time", "timestamp", "json", "numeric", "character varying", "array", "timestamp without time zone", "timestamp with time zone", "jsonb":
+	case "char", "varchar", "text", "tinytext", "mediumtext", "longtext", "enum", "datetime", "date", "time", "timestamp", "json", "numeric", "character varying", "timestamp without time zone", "timestamp with time zone", "jsonb":
 		goType = "string"
 		fieldClass = "StringField"
 	case "binary", "varbinary", "blob", "tinyblob", "mediumblob", "longblob":
 		// TODO: use []byte ?
 		goType = "string"
 		fieldClass = "StringField"
+	case "array":
+		// TODO: Switch to specific type instead of interface.
+		goType = "[]interface{}"
+		fieldClass = "ArrayField"
 	case "geometry", "point", "linestring", "polygon", "multipoint", "multilinestring", "multipolygon", "geometrycollection":
 		goType = "sqlingo.WellKnownBinary"
 		fieldClass = "WellKnownBinaryField"
@@ -191,6 +195,10 @@ func Generate(driverName string, exampleDataSourceName string) (string, error) {
 
 	code += "type booleanField interface {\n"
 	code += "\tsqlingo.BooleanField\n"
+	code += "}\n\n"
+
+	code += "type arrayField interface {\n"
+	code += "\tsqlingo.ArrayField\n"
 	code += "}\n\n"
 
 	if len(options.tableNames) == 0 {

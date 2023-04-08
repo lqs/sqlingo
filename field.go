@@ -26,6 +26,13 @@ type StringField interface {
 	GetTable() Table
 }
 
+// ArrayField is the interface of a generated field of array type.
+type ArrayField interface {
+	ArrayExpression
+	IndexOf(index int) Field
+	GetTable() Table
+}
+
 type actualField struct {
 	expression
 	table Table
