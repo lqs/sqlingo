@@ -16,11 +16,11 @@ type selectWithFields interface {
 
 type selectWithTables interface {
 	toSelectJoin
+	toSelectWhere
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
 	toUnionSelect
-	Where(conditions ...BooleanExpression) selectWithWhere
 	GroupBy(expressions ...Expression) selectWithGroupBy
 	OrderBy(orderBys ...OrderBy) selectWithOrder
 	Limit(limit int) selectWithLimit
@@ -37,18 +37,24 @@ type selectWithJoin interface {
 }
 
 type selectWithJoinOn interface {
+	toSelectWhere
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
 	toUnionSelect
 	toSelectJoin
-	Where(conditions ...BooleanExpression) selectWithWhere
 	GroupBy(expressions ...Expression) selectWithGroupBy
 	OrderBy(orderBys ...OrderBy) selectWithOrder
 	Limit(limit int) selectWithLimit
 }
 
+type toSelectWhere interface {
+	Where(conditions ...BooleanExpression) selectWithWhere
+	WhereIf(prerequisite bool, conditions ...BooleanExpression) selectWithWhere
+}
+
 type selectWithWhere interface {
+	toSelectWhere
 	toSelectWithLock
 	toSelectWithContext
 	toSelectFinal
@@ -262,7 +268,23 @@ func (d *database) SelectDistinct(fields ...interface{}) selectWithFields {
 }
 
 func (s selectStatus) Where(conditions ...BooleanExpression) selectWithWhere {
-	activeSelectBase(&s).where = And(conditions...)
+	if base := activeSelectBase(&s); base.where == nil {
+		base.where = And(conditions...)
+	} else {
+		base.where = And(base.where, And(conditions...))
+	}
+	return s
+}
+
+func (s selectStatus) WhereIf(prerequisite bool, conditions ...BooleanExpression) selectWithWhere {
+	if !prerequisite {
+		return s
+	}
+	if base := activeSelectBase(&s); base.where == nil {
+		base.where = And(conditions...)
+	} else {
+		base.where = And(base.where, And(conditions...))
+	}
 	return s
 }
 

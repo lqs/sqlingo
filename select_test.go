@@ -41,7 +41,25 @@ func TestSelect(t *testing.T) {
 
 	db.Select(field1).From(Table1).Where(field1.Equals(42)).Limit(10).GetSQL()
 
-	db.Select(field1, field2, field3, Count(1).As("count")).
+	_, _ = db.Select(field1).From(Table1).Where(field1.Equals(1), field2.Equals(2)).FetchFirst()
+	assertLastSql(t, "SELECT `field1` FROM `table1` WHERE `field1` = 1 AND `field2` = 2")
+
+	_, _ = db.Select(field1).From(Table1).Where(field1.Equals(1)).Where(field2.Equals(2)).FetchFirst()
+	assertLastSql(t, "SELECT `field1` FROM `table1` WHERE `field1` = 1 AND `field2` = 2")
+
+	_, _ = db.Select(field1).From(Table1).Where(field1.Equals(1)).WhereIf(true, field2.Equals(2)).FetchFirst()
+	assertLastSql(t, "SELECT `field1` FROM `table1` WHERE `field1` = 1 AND `field2` = 2")
+
+	_, _ = db.Select(field1).From(Table1).Where(field1.Equals(1)).WhereIf(false, field2.Equals(2)).FetchFirst()
+	assertLastSql(t, "SELECT `field1` FROM `table1` WHERE `field1` = 1")
+
+	_, _ = db.Select(field1).From(Table1).WhereIf(true, field2.Equals(2)).FetchFirst()
+	assertLastSql(t, "SELECT `field1` FROM `table1` WHERE `field2` = 2")
+
+	_, _ = db.Select(field1).From(Table1).WhereIf(false, field2.Equals(2)).FetchFirst()
+	assertLastSql(t, "SELECT `field1` FROM `table1`")
+
+	_, _ = db.Select(field1, field2, field3, Count(1).As("count")).
 		From(Table1, table2).
 		Where(field1.Equals(field3), field2.In(db.Select(field3).From(table2))).
 		GroupBy(field2).
@@ -50,9 +68,11 @@ func TestSelect(t *testing.T) {
 		Limit(10).
 		Offset(20).
 		LockInShareMode().
-		GetSQL()
+		FetchFirst()
+	assertLastSql(t, "SELECT `table1`.`field1`, `table1`.`field2`, `table2`.`field3`, COUNT(1) AS count FROM `table1`, `table2` WHERE `table1`.`field1` = `table2`.`field3` AND `table1`.`field2` IN (SELECT `field3` FROM `table2`) GROUP BY `table1`.`field2` HAVING (count) > 1 ORDER BY `table1`.`field1` DESC, `table1`.`field2` LIMIT 10 OFFSET 20 LOCK IN SHARE MODE")
 
-	db.SelectDistinct(field2).From(Table1).GetSQL()
+	_, _ = db.SelectDistinct(field2).From(Table1).FetchFirst()
+	assertLastSql(t, "SELECT DISTINCT `field2` FROM `table1`")
 
 	_, _ = db.Select(field1, field3).From(Table1).Join(table2).On(field1.Equals(field3)).FetchFirst()
 	assertLastSql(t, "SELECT `table1`.`field1`, `table2`.`field3` FROM `table1` JOIN `table2` ON `table1`.`field1` = `table2`.`field3`")
@@ -68,15 +88,16 @@ func TestSelect(t *testing.T) {
 
 	db.Select(1).WithContext(context.Background())
 
-	db.SelectFrom(Table1).GetSQL()
+	_, _ = db.SelectFrom(Table1).FetchFirst()
+	assertLastSql(t, "SELECT <fields sql> FROM `table1`")
 
-	db.Select([]Field{field1, field2}).From(Table1).FetchFirst()
+	_, _ = db.Select([]Field{field1, field2}).From(Table1).FetchFirst()
 	assertLastSql(t, "SELECT `field1`, `field2` FROM `table1`")
 
-	db.Select([]interface{}{&field1, field2, []int{3, 4}}).From(Table1).FetchFirst()
+	_, _ = db.Select([]interface{}{&field1, field2, []int{3, 4}}).From(Table1).FetchFirst()
 	assertLastSql(t, "SELECT `field1`, `field2`, 3, 4 FROM `table1`")
 
-	db.Select(field1, Table1).FetchFirst()
+	_, _ = db.Select(field1, Table1).FetchFirst()
 	assertLastSql(t, "SELECT `field1`, `field1`, `field2` FROM `table1`")
 }
 
