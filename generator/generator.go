@@ -214,14 +214,14 @@ func Generate(driverName string, exampleDataSourceName string) (string, error) {
 		item := &tableCodeItem{}
 		tableCodeMap[tableName] = item
 		go func(tableName string) {
+			defer wg.Done()
 			tableCode, err := generateTable(schemaFetcher, tableName, options.forceCases)
 			if err != nil {
 				item.err = err
 				return
 			}
-			fmt.Fprintf(os.Stderr, "Generated (%d/%d) %s\n", atomic.AddInt32(&counter, 1), len(options.tableNames), tableName)
+			_, _ = fmt.Fprintf(os.Stderr, "Generated (%d/%d) %s\n", atomic.AddInt32(&counter, 1), len(options.tableNames), tableName)
 			item.code = tableCode
-			wg.Done()
 		}(tableName)
 	}
 	wg.Wait()
