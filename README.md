@@ -34,7 +34,7 @@
 The first step is to generate code from the database. In order to generate code, sqlingo requires your tables are already created in the database.
 
 ```
-$ go get -u github.com/lqs/sqlingo/sqlingo-gen-mysql
+$ go install github.com/lqs/sqlingo/sqlingo-gen-mysql@latest
 $ mkdir -p generated/sqlingo
 $ sqlingo-gen-mysql root:123456@/database_name >generated/sqlingo/database_name.dsl.go
 ```
