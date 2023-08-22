@@ -223,10 +223,16 @@ func TestFetchAll(t *testing.T) {
 }
 
 func TestLock(t *testing.T) {
-	db := database{}
+	db := newMockDatabase()
 	table1 := NewTable("table1")
-	db.Select(1).From(table1).LockInShareMode()
-	db.Select(1).From(table1).ForUpdate()
+	_, _ = db.Select(1).From(table1).LockInShareMode().FetchAll()
+	assertLastSql(t, "SELECT 1 FROM `table1` LOCK IN SHARE MODE")
+	_, _ = db.Select(1).From(table1).ForUpdate().FetchAll()
+	assertLastSql(t, "SELECT 1 FROM `table1` FOR UPDATE")
+	_, _ = db.Select(1).From(table1).ForUpdateNoWait().FetchAll()
+	assertLastSql(t, "SELECT 1 FROM `table1` FOR UPDATE NOWAIT")
+	_, _ = db.Select(1).From(table1).ForUpdateSkipLocked().FetchAll()
+	assertLastSql(t, "SELECT 1 FROM `table1` FOR UPDATE SKIP LOCKED")
 }
 
 func TestUnion(t *testing.T) {

@@ -105,6 +105,8 @@ type selectWithOffset interface {
 type toSelectWithLock interface {
 	LockInShareMode() selectWithLock
 	ForUpdate() selectWithLock
+	ForUpdateNoWait() selectWithLock
+	ForUpdateSkipLocked() selectWithLock
 }
 
 type selectWithLock interface {
@@ -389,6 +391,16 @@ func (s selectStatus) LockInShareMode() selectWithLock {
 
 func (s selectStatus) ForUpdate() selectWithLock {
 	s.lock = " FOR UPDATE"
+	return s
+}
+
+func (s selectStatus) ForUpdateNoWait() selectWithLock {
+	s.lock = " FOR UPDATE NOWAIT"
+	return s
+}
+
+func (s selectStatus) ForUpdateSkipLocked() selectWithLock {
+	s.lock = " FOR UPDATE SKIP LOCKED"
 	return s
 }
 
