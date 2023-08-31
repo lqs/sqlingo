@@ -20,12 +20,6 @@ type untypedTextArray struct {
 	Dimensions []ArrayDimension //
 }
 
-// ParseToSlice only suppose one-dimensional array
-func ParseToSlice(queryResult string, dest any) error {
-	// todo
-	return nil
-}
-
 // Skip the space prefix
 func skipWhitespace(buf *bytes.Buffer) {
 	var r rune
