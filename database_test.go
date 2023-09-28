@@ -32,7 +32,7 @@ func (m *mockConn) Begin() (driver.Tx, error) {
 }
 
 var sharedMockConn = &mockConn{
-	columnCount: 7,
+	columnCount: 11,
 	rowCount:    10,
 }
 

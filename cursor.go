@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"time"
 )
 
 // Cursor is the interface of a row cursor.
@@ -35,6 +36,10 @@ func preparePointers(val reflect.Value, scans *[]interface{}) error {
 			*scans = append(*scans, addr.Interface())
 		}
 	case reflect.Struct:
+		if val.Type() == reflect.TypeOf(time.Time{}) {
+			*scans = append(*scans, val.Addr().Interface())
+			return nil
+		}
 		for j := 0; j < val.NumField(); j++ {
 			field := val.Field(j)
 			if field.Kind() == reflect.Interface {
@@ -106,16 +111,27 @@ func (c cursor) Scan(dest ...interface{}) error {
 
 	pbs := make(map[int]*bool)
 	ppbs := make(map[int]**bool)
+	pts := make(map[int]*time.Time)
+	ppts := make(map[int]**time.Time)
 
 	for i, scan := range scans {
-		if pb, ok := scan.(*bool); ok {
+		switch scan.(type) {
+		case *bool:
 			var s []uint8
 			scans[i] = &s
-			pbs[i] = pb
-		} else if ppb, ok := scan.(**bool); ok {
+			pbs[i] = scan.(*bool)
+		case **bool:
 			var s *[]uint8
 			scans[i] = &s
-			ppbs[i] = ppb
+			ppbs[i] = scan.(**bool)
+		case *time.Time:
+			var s string
+			scans[i] = &s
+			pts[i] = scan.(*time.Time)
+		case **time.Time:
+			var s *string
+			scans[i] = &s
+			ppts[i] = scan.(**time.Time)
 		}
 	}
 
@@ -143,6 +159,27 @@ func (c cursor) Scan(dest ...interface{}) error {
 				return err
 			}
 			*ppb = &b
+		}
+	}
+	for i, pt := range pts {
+		if *(scans[i].(*string)) == "" {
+			return fmt.Errorf("field %d is null", i)
+		}
+		t, err := time.Parse("2006-01-02 15:04:05", *(scans[i].(*string)))
+		if err != nil {
+			return err
+		}
+		*pt = t
+	}
+	for i, ppt := range ppts {
+		if *(scans[i].(**string)) == nil {
+			*ppt = nil
+		} else {
+			t, err := time.Parse("2006-01-02 15:04:05", **(scans[i].(**string)))
+			if err != nil {
+				return err
+			}
+			*ppt = &t
 		}
 	}
 
