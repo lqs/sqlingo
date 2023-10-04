@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 	"unsafe"
 )
 
@@ -87,6 +88,10 @@ type StringExpression interface {
 }
 
 type ArrayExpression interface {
+	Expression
+}
+
+type DateExpression interface {
 	Expression
 }
 
@@ -310,6 +315,17 @@ func getSQL(scope scope, value interface{}) (sql string, priority priority, err 
 		sql = value.(Table).GetSQL(scope)
 	case CaseExpression:
 		sql, err = value.(CaseExpression).End().GetSQL(scope)
+	case time.Time:
+		tmStr := value.(time.Time).Format(time.DateTime)
+		sql = quoteString(tmStr)
+	case *time.Time:
+		tm := value.(*time.Time)
+		if tm == nil {
+			sql = "NULL"
+		} else {
+			tmStr := tm.Format(time.DateTime)
+			sql = quoteString(tmStr)
+		}
 	default:
 		v := reflect.ValueOf(value)
 		sql, priority, err = getSQLFromReflectValue(scope, v)

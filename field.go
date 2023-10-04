@@ -33,6 +33,11 @@ type ArrayField interface {
 	GetTable() Table
 }
 
+type DateField interface {
+	DateExpression
+	GetTable() Table
+}
+
 type actualField struct {
 	expression
 	table Table
@@ -81,6 +86,11 @@ func NewBooleanField(table Table, fieldName string) BooleanField {
 
 // NewStringField creates a reference to a string field. It should only be called from generated code.
 func NewStringField(table Table, fieldName string) StringField {
+	return newField(table, fieldName)
+}
+
+// NewDateField creates a reference to a time.Time field. It should only be called from generated code.
+func NewDateField(table Table, fieldName string) DateField {
 	return newField(table, fieldName)
 }
 
