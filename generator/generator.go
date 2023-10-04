@@ -104,9 +104,13 @@ func getType(fieldDescriptor fieldDescriptor) (goType string, fieldClass string,
 		goType = "[]interface{}"
 		fieldClass = "ArrayField"
 	case "datetime", "timestamp":
-		// todo import
-		goType = "time.Time"
-		fieldClass = "DateField"
+		if !timeAsString {
+			goType = "time.Time"
+			fieldClass = "DateField"
+		} else {
+			goType = "string"
+			fieldClass = "StringField"
+		}
 	case "geometry", "point", "linestring", "polygon", "multipoint", "multilinestring", "multipolygon", "geometrycollection":
 		goType = "sqlingo.WellKnownBinary"
 		fieldClass = "WellKnownBinaryField"
@@ -192,7 +196,7 @@ func Generate(driverName string, exampleDataSourceName string) (string, error) {
 			return "", err
 		}
 		for _, fieldDescriptor := range fieldDescriptors {
-			if fieldDescriptor.Type == "datetime" || fieldDescriptor.Type == "timestamp" {
+			if !timeAsString && fieldDescriptor.Type == "datetime" || fieldDescriptor.Type == "timestamp" {
 				needImportTime = true
 				break
 			}

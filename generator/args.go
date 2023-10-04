@@ -39,6 +39,8 @@ func parseArgs(exampleDataSourceName string) (options options) {
 					printUsageAndExit(exampleDataSourceName)
 				}
 				parseForceCases = true
+			case "timeAsString":
+				timeAsString = true
 			default:
 				printUsageAndExit(exampleDataSourceName)
 			}
