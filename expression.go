@@ -316,14 +316,14 @@ func getSQL(scope scope, value interface{}) (sql string, priority priority, err 
 	case CaseExpression:
 		sql, err = value.(CaseExpression).End().GetSQL(scope)
 	case time.Time:
-		tmStr := value.(time.Time).Format(time.DateTime)
+		tmStr := value.(time.Time).Format("2006-01-02 15:04:05")
 		sql = quoteString(tmStr)
 	case *time.Time:
 		tm := value.(*time.Time)
 		if tm == nil {
 			sql = "NULL"
 		} else {
-			tmStr := tm.Format(time.DateTime)
+			tmStr := tm.Format("2006-01-02 15:04:05")
 			sql = quoteString(tmStr)
 		}
 	default:
