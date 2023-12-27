@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"time"
 )
 
 // Cursor is the interface of a row cursor.
@@ -23,6 +24,13 @@ func (c cursor) Next() bool {
 	return c.rows.Next()
 }
 
+var timeType = reflect.TypeOf(time.Time{})
+
+func isScanner(val reflect.Value) bool {
+	_, ok := val.Addr().Interface().(sql.Scanner)
+	return ok
+}
+
 func preparePointers(val reflect.Value, scans *[]interface{}) error {
 	kind := val.Kind()
 	switch kind {
@@ -35,6 +43,10 @@ func preparePointers(val reflect.Value, scans *[]interface{}) error {
 			*scans = append(*scans, addr.Interface())
 		}
 	case reflect.Struct:
+		if canScan := val.Type() == timeType || isScanner(val); canScan {
+			*scans = append(*scans, val.Addr().Interface())
+			return nil
+		}
 		for j := 0; j < val.NumField(); j++ {
 			field := val.Field(j)
 			if field.Kind() == reflect.Interface {
@@ -85,6 +97,19 @@ func parseBool(s []byte) (bool, error) {
 }
 
 func (c cursor) Scan(dest ...interface{}) error {
+	columns, err := c.rows.Columns()
+	if err != nil {
+		return err
+	}
+	values := make([]interface{}, len(columns))
+	pointers := make([]interface{}, len(columns))
+	for i := range columns {
+		pointers[i] = &values[i]
+	}
+	if err := c.rows.Scan(pointers...); err != nil {
+		return err
+	}
+
 	if len(dest) == 0 {
 		// dry run
 		return nil
@@ -119,8 +144,7 @@ func (c cursor) Scan(dest ...interface{}) error {
 		}
 	}
 
-	err := c.rows.Scan(scans...)
-	if err != nil {
+	if err := c.rows.Scan(scans...); err != nil {
 		return err
 	}
 

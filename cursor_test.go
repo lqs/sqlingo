@@ -1,10 +1,12 @@
 package sqlingo
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"io"
 	"strconv"
 	"testing"
+	"time"
 )
 
 type mockDriver struct{}
@@ -30,7 +32,7 @@ type mockRows struct {
 }
 
 func (m mockRows) Columns() []string {
-	return []string{"a", "b", "c", "d", "e", "f", "g"}[:m.columnCount]
+	return []string{"a", "b", "c", "d", "e", "f", "g", "h"}[:m.columnCount]
 }
 
 func (m mockRows) Close() error {
@@ -58,6 +60,8 @@ func (m *mockRows) Next(dest []driver.Value) error {
 			dest[i] = dest[0]
 		case 6:
 			dest[i] = nil
+		case 7:
+			dest[i] = time.Now()
 		}
 	}
 	return nil
@@ -97,14 +101,15 @@ func TestCursor(t *testing.T) {
 	}
 	var f ****int // deep pointer
 	var g *int    // always null
+	var h string
 
 	for i := 1; i <= 10; i++ {
 		if !cursor.Next() {
 			t.Error()
 		}
 		g = &i
-		if err := cursor.Scan(&a, &b, &cde, &f, &g); err != nil {
-			t.Errorf("%v", err)
+		if err := cursor.Scan(&a, &b, &cde, &f, &g, &h); err != nil {
+			t.Fatalf("%v", err)
 		}
 		if a != i ||
 			b != strconv.Itoa(i) ||
@@ -123,7 +128,8 @@ func TestCursor(t *testing.T) {
 		var b ****bool
 		var p *string
 		var bs []byte
-		if err := cursor.Scan(&s, &s, &s, &b, &s, &bs, &p); err != nil {
+		var u string
+		if err := cursor.Scan(&s, &s, &s, &b, &s, &bs, &p, &u); err != nil {
 			t.Error(err)
 		}
 		if ****b != (i%2 == 1) ||
@@ -139,6 +145,29 @@ func TestCursor(t *testing.T) {
 		t.Error(err)
 	}
 
+}
+
+func TestScanTime(t *testing.T) {
+	db := newMockDatabase()
+	cursor, _ := db.Query("dummy sql")
+	defer cursor.Close()
+
+	var row struct {
+		A sql.NullString
+		B []byte
+		C sql.NullInt32
+		D sql.NullString
+		E sql.NullString
+		F sql.NullString
+		G sql.NullString
+		H time.Time
+	}
+	if !cursor.Next() {
+		t.Error()
+	}
+	if err := cursor.Scan(&row); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestCursorMap(t *testing.T) {
