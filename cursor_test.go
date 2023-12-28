@@ -1,6 +1,7 @@
 package sqlingo
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"io"
 	"strconv"
@@ -60,7 +61,7 @@ func (m *mockRows) Next(dest []driver.Value) error {
 		case 6:
 			dest[i] = nil
 		case 7:
-			dest[i] = "2023-09-06 18:37:46.828"
+			dest[i] = time.Now()
 		case 8:
 			dest[i] = "2023-09-06 18:37:46.828"
 		case 9:
@@ -106,6 +107,7 @@ func TestCursor(t *testing.T) {
 	}
 	var f ****int // deep pointer
 	var g *int    // always null
+	var h string
 
 	var h *time.Time
 	var j time.Time
@@ -144,7 +146,8 @@ func TestCursor(t *testing.T) {
 		var b ****bool
 		var p *string
 		var bs []byte
-		if err := cursor.Scan(&s, &s, &s, &b, &s, &bs, &p, &h, &j, &k, &l); err != nil {
+		var u string
+		if err := cursor.Scan(&s, &s, &s, &b, &s, &bs, &p, &u); err != nil {
 			t.Error(err)
 		}
 		if ****b != (i%2 == 1) ||
@@ -160,6 +163,29 @@ func TestCursor(t *testing.T) {
 		t.Error(err)
 	}
 
+}
+
+func TestScanTime(t *testing.T) {
+	db := newMockDatabase()
+	cursor, _ := db.Query("dummy sql")
+	defer cursor.Close()
+
+	var row struct {
+		A sql.NullString
+		B []byte
+		C sql.NullInt32
+		D sql.NullString
+		E sql.NullString
+		F sql.NullString
+		G sql.NullString
+		H time.Time
+	}
+	if !cursor.Next() {
+		t.Error()
+	}
+	if err := cursor.Scan(&row); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestCursorMap(t *testing.T) {
