@@ -26,6 +26,25 @@ func (c cursor) Next() bool {
 
 var timeType = reflect.TypeOf(time.Time{})
 
+var timeLayouts = []string{
+	time.DateOnly,
+	time.DateTime,
+	"2006-01-02 15:04:05.000",
+	"2006-01-02 15:04:05.000000",
+	"2006-01-02 15:04:05.000000000",
+	time.RFC3339Nano,
+}
+
+func parseTime(s string) (time.Time, error) {
+	for _, layout := range timeLayouts {
+		t, err := time.Parse(layout, s)
+		if err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unknown time format %s", s)
+}
+
 func isScanner(val reflect.Value) bool {
 	_, ok := val.Addr().Interface().(sql.Scanner)
 	return ok
@@ -196,7 +215,7 @@ func (c cursor) Scan(dest ...interface{}) error {
 		if s == nil {
 			return fmt.Errorf("field %d is null", i)
 		}
-		t, err := time.Parse("2006-01-02 15:04:05", *s)
+		t, err := parseTime(*s)
 		if err != nil {
 			return err
 		}
@@ -211,7 +230,7 @@ func (c cursor) Scan(dest ...interface{}) error {
 		if !nullString.Valid {
 			*ppts[i] = nil
 		} else {
-			t, err := time.Parse("2006-01-02 15:04:05", nullString.String)
+			t, err := parseTime(nullString.String)
 			if err != nil {
 				return err
 			}
