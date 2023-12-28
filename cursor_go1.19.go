@@ -1,3 +1,5 @@
+//go:build !go1.20 && !go1.21
+
 package sqlingo
 
 import (
@@ -27,8 +29,8 @@ func (c cursor) Next() bool {
 var timeType = reflect.TypeOf(time.Time{})
 
 var timeLayouts = []string{
-	time.DateOnly,
-	time.DateTime,
+	"2006-01-02",
+	"2006-01-02 15:04:05",
 	"2006-01-02 15:04:05.000",
 	"2006-01-02 15:04:05.000000",
 	"2006-01-02 15:04:05.000000000",
