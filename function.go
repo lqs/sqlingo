@@ -11,7 +11,7 @@ func function(name string, args ...interface{}) expression {
 }
 
 // Function creates an expression of the call to specified function.
-func Function(name string, args ...interface{}) Expression {
+func Function(name string, args ...interface{}) UnknownExpression {
 	return function(name, args...)
 }
 

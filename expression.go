@@ -32,6 +32,10 @@ type Expression interface {
 
 	IsNull() BooleanExpression
 	IsNotNull() BooleanExpression
+	IsTrue() BooleanExpression
+	IsNotTrue() BooleanExpression
+	IsFalse() BooleanExpression
+	IsNotFalse() BooleanExpression
 	In(values ...interface{}) BooleanExpression
 	NotIn(values ...interface{}) BooleanExpression
 	Between(min interface{}, max interface{}) BooleanExpression
@@ -40,7 +44,8 @@ type Expression interface {
 
 	As(alias string) Alias
 
-	IfNull(altValue interface{}) Expression
+	If(trueValue interface{}, falseValue interface{}) UnknownExpression
+	IfNull(altValue interface{}) UnknownExpression
 }
 
 // Alias is the interface of an table/column alias.
@@ -216,7 +221,11 @@ func (e expression) As(name string) Alias {
 	}}
 }
 
-func (e expression) IfNull(altValue interface{}) Expression {
+func (e expression) If(trueValue interface{}, falseValue interface{}) UnknownExpression {
+	return If(e, trueValue, falseValue)
+}
+
+func (e expression) IfNull(altValue interface{}) UnknownExpression {
 	return Function("IFNULL", e, altValue)
 }
 
@@ -405,27 +414,27 @@ func getSQLFromReflectValue(scope scope, v reflect.Value) (sql string, priority 
 17 = (assignment), :=
 */
 func (e expression) NotEquals(other interface{}) BooleanExpression {
-	return e.binaryOperation("<>", other, 11)
+	return e.binaryOperation("<>", other, 11, true)
 }
 
 func (e expression) Equals(other interface{}) BooleanExpression {
-	return e.binaryOperation("=", other, 11)
+	return e.binaryOperation("=", other, 11, true)
 }
 
 func (e expression) LessThan(other interface{}) BooleanExpression {
-	return e.binaryOperation("<", other, 11)
+	return e.binaryOperation("<", other, 11, true)
 }
 
 func (e expression) LessThanOrEquals(other interface{}) BooleanExpression {
-	return e.binaryOperation("<=", other, 11)
+	return e.binaryOperation("<=", other, 11, true)
 }
 
 func (e expression) GreaterThan(other interface{}) BooleanExpression {
-	return e.binaryOperation(">", other, 11)
+	return e.binaryOperation(">", other, 11, true)
 }
 
 func (e expression) GreaterThanOrEquals(other interface{}) BooleanExpression {
-	return e.binaryOperation(">=", other, 11)
+	return e.binaryOperation(">=", other, 11, true)
 }
 
 func toBooleanExpression(value interface{}) BooleanExpression {
@@ -453,7 +462,7 @@ func (e expression) And(other interface{}) BooleanExpression {
 			return exp
 		}
 	}
-	return e.binaryOperation("AND", other, 14)
+	return e.binaryOperation("AND", other, 14, true)
 }
 
 func (e expression) Or(other interface{}) BooleanExpression {
@@ -465,35 +474,35 @@ func (e expression) Or(other interface{}) BooleanExpression {
 			return exp
 		}
 	}
-	return e.binaryOperation("OR", other, 16)
+	return e.binaryOperation("OR", other, 16, true)
 }
 
 func (e expression) Xor(other interface{}) BooleanExpression {
-	return e.binaryOperation("XOR", other, 15)
+	return e.binaryOperation("XOR", other, 15, true)
 }
 
 func (e expression) Add(other interface{}) NumberExpression {
-	return e.binaryOperation("+", other, 7)
+	return e.binaryOperation("+", other, 7, false)
 }
 
 func (e expression) Sub(other interface{}) NumberExpression {
-	return e.binaryOperation("-", other, 7)
+	return e.binaryOperation("-", other, 7, false)
 }
 
 func (e expression) Mul(other interface{}) NumberExpression {
-	return e.binaryOperation("*", other, 6)
+	return e.binaryOperation("*", other, 6, false)
 }
 
 func (e expression) Div(other interface{}) NumberExpression {
-	return e.binaryOperation("/", other, 6)
+	return e.binaryOperation("/", other, 6, false)
 }
 
 func (e expression) IntDiv(other interface{}) NumberExpression {
-	return e.binaryOperation("DIV", other, 6)
+	return e.binaryOperation("DIV", other, 6, false)
 }
 
 func (e expression) Mod(other interface{}) NumberExpression {
-	return e.binaryOperation("%", other, 6)
+	return e.binaryOperation("%", other, 6, false)
 }
 
 func (e expression) Sum() NumberExpression {
@@ -513,7 +522,7 @@ func (e expression) Max() UnknownExpression {
 }
 
 func (e expression) Like(other interface{}) BooleanExpression {
-	return e.binaryOperation("LIKE", other, 11)
+	return e.binaryOperation("LIKE", other, 11, true)
 }
 
 func (e expression) Concat(other interface{}) StringExpression {
@@ -524,7 +533,7 @@ func (e expression) Contains(substring string) BooleanExpression {
 	return function("LOCATE", substring, e).GreaterThan(0)
 }
 
-func (e expression) binaryOperation(operator string, value interface{}, priority priority) expression {
+func (e expression) binaryOperation(operator string, value interface{}, priority priority, isBool bool) expression {
 	return expression{builder: func(scope scope) (string, error) {
 		leftSql, err := e.GetSQL(scope)
 		if err != nil {
@@ -557,7 +566,7 @@ func (e expression) binaryOperation(operator string, value interface{}, priority
 			sb.WriteByte(')')
 		}
 		return sb.String(), nil
-	}, priority: priority}
+	}, priority: priority, isBool: isBool}
 }
 
 func (e expression) prefixSuffixExpression(prefix string, suffix string, priority priority, isBool bool) expression {
@@ -598,6 +607,22 @@ func (e expression) Not() BooleanExpression {
 
 func (e expression) IsNotNull() BooleanExpression {
 	return e.prefixSuffixExpression("", " IS NOT NULL", 11, true)
+}
+
+func (e expression) IsTrue() BooleanExpression {
+	return e.prefixSuffixExpression("", " IS TRUE", 11, true)
+}
+
+func (e expression) IsNotTrue() BooleanExpression {
+	return e.prefixSuffixExpression("", " IS NOT TRUE", 11, true)
+}
+
+func (e expression) IsFalse() BooleanExpression {
+	return e.prefixSuffixExpression("", " IS FALSE", 11, true)
+}
+
+func (e expression) IsNotFalse() BooleanExpression {
+	return e.prefixSuffixExpression("", " IS NOT FALSE", 11, true)
 }
 
 func expandSliceValue(value reflect.Value) (result []interface{}) {

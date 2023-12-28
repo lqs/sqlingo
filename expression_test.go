@@ -112,6 +112,11 @@ func TestFunc(t *testing.T) {
 
 	assertValue(t, e.IsNull(), "<> IS NULL")
 	assertValue(t, e.IsNotNull(), "<> IS NOT NULL")
+	assertValue(t, e.IsTrue(), "<> IS TRUE")
+	assertValue(t, e.IsNotTrue(), "<> IS NOT TRUE")
+	assertValue(t, e.IsFalse(), "<> IS FALSE")
+	assertValue(t, e.IsNotFalse(), "<> IS NOT FALSE")
+	assertValue(t, e.If(3, 4), "IF(<>, 3, 4)")
 	assertValue(t, e.IfNull(3), "IFNULL(<>, 3)")
 	assertValue(t, e.IfEmpty(3), "IF(<> <> '', <>, 3)")
 	assertValue(t, e.IsEmpty(), "<> = ''")
