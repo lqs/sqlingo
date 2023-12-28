@@ -20,6 +20,7 @@
 * Context support
 * Transaction support
 * Interceptor support
+* Golang time.Time is supported now, but you can still use the string type by adding `-timeAsString` when generating the model
 
 ## Database Support Status
 | Database    | Status       |
@@ -104,3 +105,5 @@ func main() {
     	Execute()
 }
 ```
+## TODO
+* Millisecond time is not currently supported

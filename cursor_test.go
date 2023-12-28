@@ -32,7 +32,7 @@ type mockRows struct {
 }
 
 func (m mockRows) Columns() []string {
-	return []string{"a", "b", "c", "d", "e", "f", "g", "h"}[:m.columnCount]
+	return []string{"a", "b", "c", "d", "e", "f", "g", "h", "j", "k", "l"}[:m.columnCount]
 }
 
 func (m mockRows) Close() error {
@@ -62,6 +62,12 @@ func (m *mockRows) Next(dest []driver.Value) error {
 			dest[i] = nil
 		case 7:
 			dest[i] = time.Now()
+		case 8:
+			dest[i] = "2023-09-06 18:37:46.828"
+		case 9:
+			dest[i] = "2023-09-06 18:37:46"
+		case 10:
+			dest[i] = "2023-09-06 18:37:46"
 		}
 	}
 	return nil
@@ -103,13 +109,21 @@ func TestCursor(t *testing.T) {
 	var g *int    // always null
 	var h string
 
+	var h *time.Time
+	var j time.Time
+	var k *time.Time
+	var l time.Time
+	tmh, _ := time.Parse("2006-01-02 15:04:05.000", "2023-09-06 18:37:46.828")
+	tmj, _ := time.Parse("2006-01-02 15:04:05.000", "2023-09-06 18:37:46.828")
+	tmk, _ := time.Parse("2006-01-02 15:04:05", "2023-09-06 18:37:46")
+	tml, _ := time.Parse("2006-01-02 15:04:05", "2023-09-06 18:37:46")
 	for i := 1; i <= 10; i++ {
 		if !cursor.Next() {
 			t.Error()
 		}
 		g = &i
-		if err := cursor.Scan(&a, &b, &cde, &f, &g, &h); err != nil {
-			t.Fatalf("%v", err)
+		if err := cursor.Scan(&a, &b, &cde, &f, &g, &h, &j, &k, &l); err != nil {
+			t.Errorf("%v", err)
 		}
 		if a != i ||
 			b != strconv.Itoa(i) ||
@@ -117,7 +131,11 @@ func TestCursor(t *testing.T) {
 			cde.DE.D != (i%2 == 1) ||
 			cde.DE.E != cde.DE.D ||
 			****f != i ||
-			g != nil {
+			g != nil ||
+			*h != tmh ||
+			j != tmj ||
+			*k != tmk ||
+			l != tml {
 			t.Error(a, b, cde.C, cde.DE.D, cde.DE.E, ****f, g)
 		}
 		if err := cursor.Scan(); err != nil {

@@ -65,6 +65,17 @@ func preparePointers(val reflect.Value, scans *[]interface{}) error {
 			reflect.Float32, reflect.Float64,
 			reflect.String:
 			*scans = append(*scans, val.Addr().Interface())
+		case reflect.Struct:
+			if toType == reflect.TypeOf(time.Time{}) {
+				*scans = append(*scans, val.Addr().Interface())
+			} else {
+				to := reflect.New(toType).Elem()
+				val.Set(to.Addr())
+				err := preparePointers(to, scans)
+				if err != nil {
+					return nil
+				}
+			}
 		default:
 			to := reflect.New(toType).Elem()
 			val.Set(to.Addr())
@@ -131,16 +142,27 @@ func (c cursor) Scan(dest ...interface{}) error {
 
 	pbs := make(map[int]*bool)
 	ppbs := make(map[int]**bool)
+	pts := make(map[int]*time.Time)
+	ppts := make(map[int]**time.Time)
 
 	for i, scan := range scans {
-		if pb, ok := scan.(*bool); ok {
+		switch scan.(type) {
+		case *bool:
 			var s []uint8
 			scans[i] = &s
-			pbs[i] = pb
-		} else if ppb, ok := scan.(**bool); ok {
+			pbs[i] = scan.(*bool)
+		case **bool:
 			var s *[]uint8
 			scans[i] = &s
-			ppbs[i] = ppb
+			ppbs[i] = scan.(**bool)
+		case *time.Time:
+			var s string
+			scans[i] = &s
+			pts[i] = scan.(*time.Time)
+		case **time.Time:
+			var s sql.NullString
+			scans[i] = &s
+			ppts[i] = scan.(**time.Time)
 		}
 	}
 
@@ -167,6 +189,33 @@ func (c cursor) Scan(dest ...interface{}) error {
 				return err
 			}
 			*ppb = &b
+		}
+	}
+	for i := range pts {
+		s := scans[i].(*string)
+		if s == nil {
+			return fmt.Errorf("field %d is null", i)
+		}
+		t, err := time.Parse("2006-01-02 15:04:05", *s)
+		if err != nil {
+			return err
+		}
+		*pts[i] = t
+
+	}
+	for i := range ppts {
+		nullString := scans[i].(*sql.NullString)
+		if nullString == nil {
+			return fmt.Errorf("field %d is null", i)
+		}
+		if !nullString.Valid {
+			*ppts[i] = nil
+		} else {
+			t, err := time.Parse("2006-01-02 15:04:05", nullString.String)
+			if err != nil {
+				return err
+			}
+			*ppts[i] = &t
 		}
 	}
 

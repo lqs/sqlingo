@@ -6,6 +6,8 @@ import (
 	"strconv"
 )
 
+var timeAsString = false
+
 type mysqlSchemaFetcher struct {
 	db *sql.DB
 }
