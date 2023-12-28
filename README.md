@@ -105,5 +105,3 @@ func main() {
     	Execute()
 }
 ```
-## TODO
-* Millisecond time is not currently supported
