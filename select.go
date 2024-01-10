@@ -30,6 +30,7 @@ type toSelectJoin interface {
 	Join(table Table) selectWithJoin
 	LeftJoin(table Table) selectWithJoin
 	RightJoin(table Table) selectWithJoin
+	NaturalJoin(table Table) selectWithJoinOn
 }
 
 type selectWithJoin interface {
@@ -186,6 +187,18 @@ func (s selectStatus) LeftJoin(table Table) selectWithJoin {
 
 func (s selectStatus) RightJoin(table Table) selectWithJoin {
 	return s.join("RIGHT ", table)
+}
+
+func (s selectStatus) NaturalJoin(table Table) selectWithJoinOn {
+	base := activeSelectBase(&s)
+	base.scope.lastJoin = &join{
+		previous: base.scope.lastJoin,
+		prefix:   "NATURAL ",
+		table:    table,
+	}
+	join := *base.scope.lastJoin
+	base.scope.lastJoin = &join
+	return s
 }
 
 func (s selectStatus) join(prefix string, table Table) selectWithJoin {
@@ -462,16 +475,18 @@ func (s selectBase) buildSelectBase(sb *strings.Builder) error {
 		}
 		for i := len(joins) - 1; i >= 0; i-- {
 			join := joins[i]
-			onSql, err := join.on.GetSQL(s.scope)
-			if err != nil {
-				return err
-			}
 			sb.WriteString(" ")
 			sb.WriteString(join.prefix)
 			sb.WriteString("JOIN ")
 			sb.WriteString(join.table.GetSQL(s.scope))
-			sb.WriteString(" ON ")
-			sb.WriteString(onSql)
+			if join.on != nil {
+				onSql, err := join.on.GetSQL(s.scope)
+				if err != nil {
+					return err
+				}
+				sb.WriteString(" ON ")
+				sb.WriteString(onSql)
+			}
 		}
 	}
 

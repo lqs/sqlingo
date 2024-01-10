@@ -284,3 +284,18 @@ func TestUnion(t *testing.T) {
 		"UNION ALL SELECT DISTINCT 7 FROM `table2` WHERE C7"+
 		") AS t")
 }
+
+func Test_selectStatus_NaturalJoin(t *testing.T) {
+	db := newMockDatabase()
+	table1 := NewTable("table1")
+	table2 := NewTable("table2")
+
+	cond1 := Raw("<condition 1>")
+	//cond2 := Raw("<condition 2>")
+
+	_, _ = db.SelectFrom(table1).NaturalJoin(table2).Where(cond1).FetchAll()
+	assertLastSql(t, "SELECT * FROM `table1` NATURAL JOIN `table2` WHERE <condition 1>")
+
+	_, _ = db.SelectFrom(table1).NaturalJoin(table2).Where(cond1).FetchAll()
+	assertLastSql(t, "SELECT * FROM `table1` NATURAL JOIN `table2` WHERE <condition 1>")
+}
