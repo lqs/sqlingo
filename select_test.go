@@ -289,13 +289,21 @@ func Test_selectStatus_NaturalJoin(t *testing.T) {
 	db := newMockDatabase()
 	table1 := NewTable("table1")
 	table2 := NewTable("table2")
-
+	table3 := NewTable("table3")
+	table4 := NewTable("table4")
 	cond1 := Raw("<condition 1>")
-	//cond2 := Raw("<condition 2>")
+	cond2 := Raw("<condition 2>")
+	cond3 := Raw("<condition 3>")
 
 	_, _ = db.SelectFrom(table1).NaturalJoin(table2).Where(cond1).FetchAll()
 	assertLastSql(t, "SELECT * FROM `table1` NATURAL JOIN `table2` WHERE <condition 1>")
+	_, _ = db.SelectFrom(table1).
+		Join(table2).On(cond1).
+		NaturalJoin(table2).
+		NaturalJoin(table3).
+		LeftJoin(table4).On(cond3).
+		Where(cond2).FetchAll()
+	assertLastSql(t, "SELECT * FROM `table1` JOIN `table2` ON <condition 1> NATURAL JOIN `table2`"+
+		" NATURAL JOIN `table3` LEFT JOIN `table4` ON <condition 3> WHERE <condition 2>")
 
-	_, _ = db.SelectFrom(table1).NaturalJoin(table2).Where(cond1).FetchAll()
-	assertLastSql(t, "SELECT * FROM `table1` NATURAL JOIN `table2` WHERE <condition 1>")
 }
