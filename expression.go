@@ -76,6 +76,11 @@ type NumberExpression interface {
 	Avg() NumberExpression
 	Min() UnknownExpression
 	Max() UnknownExpression
+
+	BitWiseAnd(other interface{}) NumberExpression
+	BitWiseOr(other interface{}) NumberExpression
+	BitWiseXor(other interface{}) NumberExpression
+	BitWiseNot() NumberExpression
 }
 
 // StringExpression is the interface of an SQL expression with string value.
@@ -531,6 +536,23 @@ func (e expression) Concat(other interface{}) StringExpression {
 
 func (e expression) Contains(substring string) BooleanExpression {
 	return function("LOCATE", substring, e).GreaterThan(0)
+}
+
+func (e expression) BitWiseAnd(other interface{}) NumberExpression {
+	return e.binaryOperation("&", other, 9, false)
+}
+
+func (e expression) BitWiseOr(other interface{}) NumberExpression {
+	return e.binaryOperation("|", other, 10, false)
+}
+
+func (e expression) BitWiseXor(other interface{}) NumberExpression {
+	return e.binaryOperation("^", other, 5, false)
+}
+
+func (e expression) BitWiseNot() NumberExpression {
+	return e.prefixSuffixExpression("~", "", 4, false)
+
 }
 
 func (e expression) binaryOperation(operator string, value interface{}, priority priority, isBool bool) expression {
