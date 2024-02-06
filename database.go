@@ -92,7 +92,7 @@ func defaultLogger(sql string, durationNano int64) {
 	for i := 0; i < 16; i++ {
 		_, file, line, ok = runtime.Caller(i)
 		// `strings.HasPrefix(file, srcPrefix)` jump out when using sqlingo as dependent package
-		// `strings.HasSuffix(file, "_test.go")` jump out when executing unit test case
+		// `strings.HasSuffix(file, "_test.go")` jump out when executing unit test cases
 		// `!ok` this is so terrible for something unexpected happened
 		if !ok || strings.HasPrefix(file, srcPrefix) || strings.HasSuffix(file, "_test.go") {
 			break
@@ -134,7 +134,9 @@ func (d *database) SetInterceptor(interceptor InterceptorFunc) {
 	d.interceptor = interceptor
 }
 
-// Open a database, similar to sql.Open
+// Open a database, similar to sql.Open.
+// `db` using a default logger, which print log to stderr and regard executing time gt 100ms as slow sql.
+// To disable the default logger, use `db.SetLogger(nil)`.
 func Open(driverName string, dataSourceName string) (db Database, err error) {
 	var sqlDB *sql.DB
 	if dataSourceName != "" {
