@@ -35,6 +35,7 @@ type toSelectJoin interface {
 
 type selectWithJoin interface {
 	On(condition BooleanExpression) selectWithJoinOn
+	Using(fields ...Field) selectWithJoinOn
 }
 
 type selectWithJoinOn interface {
@@ -143,6 +144,7 @@ type join struct {
 	prefix   string
 	table    Table
 	on       BooleanExpression
+	using    []Field
 }
 
 type selectBase struct {
@@ -215,6 +217,14 @@ func (s selectStatus) On(condition BooleanExpression) selectWithJoinOn {
 	base := activeSelectBase(&s)
 	join := *base.scope.lastJoin
 	join.on = condition
+	base.scope.lastJoin = &join
+	return s
+}
+
+func (s selectStatus) Using(fields ...Field) selectWithJoinOn {
+	base := activeSelectBase(&s)
+	join := *base.scope.lastJoin
+	join.using = fields
 	base.scope.lastJoin = &join
 	return s
 }
@@ -579,11 +589,17 @@ func (s selectStatus) FetchCursor() (Cursor, error) {
 		return nil, err
 	}
 
-	cursor, err := s.base.scope.Database.QueryContext(s.ctx, sqlString)
+	var c Cursor
+	if s.base.scope.Transaction != nil {
+		c, err = s.base.scope.Transaction.QueryContext(s.ctx, sqlString)
+	} else {
+		c, err = s.base.scope.Database.QueryContext(s.ctx, sqlString)
+	}
+
 	if err != nil {
 		return nil, err
 	}
-	return cursor, nil
+	return c, nil
 }
 
 func (s selectStatus) FetchFirst(dest ...interface{}) (ok bool, err error) {

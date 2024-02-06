@@ -29,9 +29,7 @@ func TestTransaction(t *testing.T) {
 	db := newMockDatabase()
 
 	err := db.BeginTx(nil, nil, func(tx Transaction) error {
-		if tx.GetDB() != db.GetDB() {
-			t.Error()
-		}
+
 		if tx.GetTx() == nil {
 			t.Error()
 		}

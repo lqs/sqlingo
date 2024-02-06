@@ -43,16 +43,12 @@ type Database interface {
 	Update(table Table) updateWithSet
 	// Initiate a DELETE FROM statement
 	DeleteFrom(table Table) deleteWithTable
-}
 
-type txOrDB interface {
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	Begin() (Transaction, error)
 }
 
 type database struct {
 	db               *sql.DB
-	tx               *sql.Tx
 	logger           func(sql string, durationNano int64)
 	dialect          dialect
 	retryPolicy      func(error) bool
@@ -101,13 +97,6 @@ func (d database) GetDB() *sql.DB {
 	return d.db
 }
 
-func (d database) getTxOrDB() txOrDB {
-	if d.tx != nil {
-		return d.tx
-	}
-	return d.db
-}
-
 func (d database) Query(sqlString string) (Cursor, error) {
 	return d.QueryContext(context.Background(), sqlString)
 }
@@ -119,7 +108,7 @@ func (d database) QueryContext(ctx context.Context, sqlString string) (Cursor, e
 
 		rows, err := d.queryContextOnce(ctx, sqlStringWithCallerInfo)
 		if err != nil {
-			isRetry = d.tx == nil && d.retryPolicy != nil && d.retryPolicy(err)
+			isRetry = d.retryPolicy != nil && d.retryPolicy(err)
 			if isRetry {
 				continue
 			}
@@ -144,7 +133,7 @@ func (d database) queryContextOnce(ctx context.Context, sqlStringWithCallerInfo 
 	interceptor := d.interceptor
 	var rows *sql.Rows
 	invoker := func(ctx context.Context, sql string) (err error) {
-		rows, err = d.getTxOrDB().QueryContext(ctx, sql)
+		rows, err = d.GetDB().QueryContext(ctx, sql)
 		return
 	}
 
@@ -180,7 +169,7 @@ func (d database) ExecuteContext(ctx context.Context, sqlString string) (sql.Res
 
 	var result sql.Result
 	invoker := func(ctx context.Context, sql string) (err error) {
-		result, err = d.getTxOrDB().ExecContext(ctx, sql)
+		result, err = d.GetDB().ExecContext(ctx, sql)
 		return
 	}
 	var err error
