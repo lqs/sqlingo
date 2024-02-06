@@ -35,7 +35,6 @@ type toSelectJoin interface {
 
 type selectWithJoin interface {
 	On(condition BooleanExpression) selectWithJoinOn
-	Using(fields ...Field) selectWithJoinOn
 }
 
 type selectWithJoinOn interface {
@@ -144,7 +143,6 @@ type join struct {
 	prefix   string
 	table    Table
 	on       BooleanExpression
-	using    []Field
 }
 
 type selectBase struct {
@@ -217,14 +215,6 @@ func (s selectStatus) On(condition BooleanExpression) selectWithJoinOn {
 	base := activeSelectBase(&s)
 	join := *base.scope.lastJoin
 	join.on = condition
-	base.scope.lastJoin = &join
-	return s
-}
-
-func (s selectStatus) Using(fields ...Field) selectWithJoinOn {
-	base := activeSelectBase(&s)
-	join := *base.scope.lastJoin
-	join.using = fields
 	base.scope.lastJoin = &join
 	return s
 }
