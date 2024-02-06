@@ -3,7 +3,20 @@ package sqlingo
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"sync"
 	"time"
+)
+
+const (
+	green = "\033[32m"
+	red   = "\033[31m"
+	blue  = "\033[34m"
+	reset = "\033[0m"
 )
 
 // Database is the interface of a database with underlying sql.DB object.
@@ -47,6 +60,11 @@ type Database interface {
 	Begin() (Transaction, error)
 }
 
+var (
+	once      sync.Once
+	srcPrefix string
+)
+
 type database struct {
 	db               *sql.DB
 	logger           func(sql string, durationNano int64)
@@ -58,6 +76,47 @@ type database struct {
 
 func (d *database) SetLogger(logger func(sql string, durationNano int64)) {
 	d.logger = logger
+}
+
+func DefaultLogger(sql string, durationNano int64) {
+	once.Do(func() {
+		// $GOPATH/pkg/mod/github.com/lqs/sqlingo@vX.X.X/database.go
+		_, file, _, _ := runtime.Caller(0)
+		// $GOPATH/pkg/mod/github.com/lqs/sqlingo@vX.X.X
+		srcPrefix = filepath.Dir(file)
+	})
+
+	var file string
+	var line int
+	var ok bool
+	for i := 0; i < 16; i++ {
+		_, file, line, ok = runtime.Caller(i)
+		if !ok || strings.HasSuffix(file, srcPrefix) || strings.HasSuffix(file, "_test.go") {
+			break
+		}
+	}
+
+	du := time.Duration(durationNano)
+	// todo shouldn't append ';' here
+	if !strings.HasSuffix(sql, ";") {
+		sql += ";"
+	}
+	line1 := strings.Join(
+		[]string{
+			"[sqlingo]",
+			time.Now().Format("2006-01-02 15:04:05"),
+			fmt.Sprintf("|%s|", du.String()),
+			file + ":" + fmt.Sprint(line),
+		},
+		" ")
+
+	fmt.Fprintln(os.Stderr, blue+line1+reset)
+	if du < 100*time.Millisecond {
+		fmt.Fprintf(os.Stderr, "%s%s%s\n", green, sql, reset)
+	} else {
+		fmt.Fprintf(os.Stderr, "%s%s%s\n", red, sql, reset)
+	}
+	fmt.Fprintln(os.Stderr)
 }
 
 func (d *database) SetRetryPolicy(retryPolicy func(err error) bool) {
@@ -82,6 +141,7 @@ func Open(driverName string, dataSourceName string) (db Database, err error) {
 		}
 	}
 	db = Use(driverName, sqlDB)
+	db.SetLogger(DefaultLogger)
 	return
 }
 
