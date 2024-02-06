@@ -91,10 +91,10 @@ func defaultLogger(sql string, durationNano int64) {
 	var ok bool
 	for i := 0; i < 16; i++ {
 		_, file, line, ok = runtime.Caller(i)
-		// `strings.HasPrefix(file, srcPrefix)` jump out when using sqlingo as dependent package
+		// `!strings.HasPrefix(file, srcPrefix)` jump out when using sqlingo as dependent package
 		// `strings.HasSuffix(file, "_test.go")` jump out when executing unit test cases
 		// `!ok` this is so terrible for something unexpected happened
-		if !ok || strings.HasPrefix(file, srcPrefix) || strings.HasSuffix(file, "_test.go") {
+		if !ok || !strings.HasPrefix(file, srcPrefix) || strings.HasSuffix(file, "_test.go") {
 			break
 		}
 	}
