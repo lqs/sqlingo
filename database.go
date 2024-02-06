@@ -78,7 +78,7 @@ func (d *database) SetLogger(logger func(sql string, durationNano int64)) {
 	d.logger = logger
 }
 
-func DefaultLogger(sql string, durationNano int64) {
+func defaultLogger(sql string, durationNano int64) {
 	once.Do(func() {
 		// $GOPATH/pkg/mod/github.com/lqs/sqlingo@vX.X.X/database.go
 		_, file, _, _ := runtime.Caller(0)
@@ -91,7 +91,10 @@ func DefaultLogger(sql string, durationNano int64) {
 	var ok bool
 	for i := 0; i < 16; i++ {
 		_, file, line, ok = runtime.Caller(i)
-		if !ok || strings.HasSuffix(file, srcPrefix) || strings.HasSuffix(file, "_test.go") {
+		// `strings.HasPrefix(file, srcPrefix)` jump out when using sqlingo as dependent package
+		// `strings.HasSuffix(file, "_test.go")` jump out when executing unit test case
+		// `!ok` this is so terrible for something unexpected happened
+		if !ok || strings.HasPrefix(file, srcPrefix) || strings.HasSuffix(file, "_test.go") {
 			break
 		}
 	}
@@ -141,7 +144,7 @@ func Open(driverName string, dataSourceName string) (db Database, err error) {
 		}
 	}
 	db = Use(driverName, sqlDB)
-	db.SetLogger(DefaultLogger)
+	db.SetLogger(defaultLogger)
 	return
 }
 
