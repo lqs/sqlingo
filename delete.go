@@ -91,5 +91,8 @@ func (s deleteStatus) Execute() (sql.Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	if s.scope.Transaction != nil {
+		return s.scope.Transaction.Execute(sqlString)
+	}
 	return s.scope.Database.Execute(sqlString)
 }

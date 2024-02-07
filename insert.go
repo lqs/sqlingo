@@ -187,5 +187,8 @@ func (s insertStatus) Execute() (result sql.Result, err error) {
 	if err != nil {
 		return nil, err
 	}
+	if s.scope.Transaction != nil {
+		return s.scope.Transaction.Execute(sqlString)
+	}
 	return s.scope.Database.Execute(sqlString)
 }
