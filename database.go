@@ -196,7 +196,8 @@ func (d database) Query(sqlString string) (Cursor, error) {
 func (d database) QueryContext(ctx context.Context, sqlString string) (Cursor, error) {
 	isRetry := false
 	for {
-		rows, err := d.queryContextOnce(ctx, sqlString, isRetry)
+		sqlStringWithCallerInfo := getCallerInfo(d, isRetry) + sqlString
+		rows, err := d.queryContextOnce(ctx, sqlStringWithCallerInfo, isRetry)
 		if err != nil {
 			isRetry = d.retryPolicy != nil && d.retryPolicy(err)
 			if isRetry {
