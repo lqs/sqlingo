@@ -93,7 +93,7 @@ func (d *database) Begin() (Transaction, error) {
 
 type transaction struct {
 	tx               *sql.Tx
-	logger           func(sql string, durationNano int64)
+	logger           LoggerFunc
 	dialect          dialect
 	retryPolicy      func(error) bool
 	enableCallerInfo bool
@@ -133,7 +133,7 @@ func (t transaction) queryContextOnce(ctx context.Context, sqlStringWithCallerIn
 	defer func() {
 		endTime := time.Now().UnixNano()
 		if t.logger != nil {
-			t.logger(sqlStringWithCallerInfo, endTime-startTime)
+			t.logger(sqlStringWithCallerInfo, endTime-startTime, true, false)
 		}
 	}()
 
@@ -169,7 +169,7 @@ func (t transaction) ExecuteContext(ctx context.Context, sqlString string) (sql.
 	defer func() {
 		endTime := time.Now().UnixNano()
 		if t.logger != nil {
-			t.logger(sqlStringWithCallerInfo, endTime-startTime)
+			t.logger(sqlStringWithCallerInfo, endTime-startTime, true, false)
 		}
 	}()
 

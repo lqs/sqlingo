@@ -72,7 +72,7 @@ func TestDatabase(t *testing.T) {
 		interceptorExecutedCount++
 		return invoker(ctx, sql)
 	})
-	db.SetLogger(func(sql string, durationNano int64) {
+	db.SetLogger(func(sql string, durationNano int64, _, _ bool) {
 		if sql != "SELECT 1" {
 			t.Error(sql)
 		}

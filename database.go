@@ -34,11 +34,12 @@ type Database interface {
 	// Executes a statement with context
 	ExecuteContext(ctx context.Context, sql string) (sql.Result, error)
 	// Set the logger function
-	SetLogger(logger func(sql string, durationNano int64))
+	SetLogger(logger LoggerFunc)
 	// Set the retry policy function.
 	// The retry policy function returns true if needs retry.
 	SetRetryPolicy(retryPolicy func(err error) bool)
-	// enable or disable caller info
+	// EnableCallerInfo enable or disable the caller info in the log.
+	// Deprecated: use SetLogger instead
 	EnableCallerInfo(enableCallerInfo bool)
 	// Set a interceptor function
 	SetInterceptor(interceptor InterceptorFunc)
@@ -73,20 +74,22 @@ var (
 
 type database struct {
 	db               *sql.DB
-	logger           func(sql string, durationNano int64)
+	logger           LoggerFunc
 	dialect          dialect
 	retryPolicy      func(error) bool
 	enableCallerInfo bool
 	interceptor      InterceptorFunc
 }
 
-func (d *database) SetLogger(logger func(sql string, durationNano int64)) {
-	d.logger = logger
+type LoggerFunc func(sql string, durationNano int64, isTx bool, retry bool)
+
+func (d *database) SetLogger(loggerFunc LoggerFunc) {
+	d.logger = loggerFunc
 }
 
 // defaultLogger is sqlingo default logger,
 // which print log to stderr and regard executing time gt 100ms as slow sql.
-func defaultLogger(sql string, durationNano int64) {
+func defaultLogger(sql string, durationNano int64, isTx bool, retry bool) {
 	// for finding code position, try once is enough
 	once.Do(func() {
 		// $GOPATH/pkg/mod/github.com/lqs/sqlingo@vX.X.X/database.go
@@ -114,11 +117,24 @@ func defaultLogger(sql string, durationNano int64) {
 	if !strings.HasSuffix(sql, ";") {
 		sql += ";"
 	}
+
+	sb := strings.Builder{}
+	sb.Grow(32)
+	sb.WriteString("|")
+	sb.WriteString(du.String())
+	if isTx {
+		sb.WriteString("|transaction") // todo using something traceable
+	}
+	if retry {
+		sb.WriteString("|retry")
+	}
+	sb.WriteString("|")
+
 	line1 := strings.Join(
 		[]string{
 			"[sqlingo]",
 			time.Now().Format("2006-01-02 15:04:05"),
-			fmt.Sprintf("|%s|", du.String()),
+			sb.String(),
 			file + ":" + fmt.Sprint(line),
 		},
 		" ")
@@ -180,9 +196,7 @@ func (d database) Query(sqlString string) (Cursor, error) {
 func (d database) QueryContext(ctx context.Context, sqlString string) (Cursor, error) {
 	isRetry := false
 	for {
-		sqlStringWithCallerInfo := getCallerInfo(d, isRetry) + sqlString
-
-		rows, err := d.queryContextOnce(ctx, sqlStringWithCallerInfo)
+		rows, err := d.queryContextOnce(ctx, sqlString, isRetry)
 		if err != nil {
 			isRetry = d.retryPolicy != nil && d.retryPolicy(err)
 			if isRetry {
@@ -194,7 +208,7 @@ func (d database) QueryContext(ctx context.Context, sqlString string) (Cursor, e
 	}
 }
 
-func (d database) queryContextOnce(ctx context.Context, sqlStringWithCallerInfo string) (*sql.Rows, error) {
+func (d database) queryContextOnce(ctx context.Context, sqlString string, retry bool) (*sql.Rows, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -202,7 +216,7 @@ func (d database) queryContextOnce(ctx context.Context, sqlStringWithCallerInfo 
 	defer func() {
 		endTime := time.Now().UnixNano()
 		if d.logger != nil {
-			d.logger(sqlStringWithCallerInfo, endTime-startTime)
+			d.logger(sqlString, endTime-startTime, false, retry)
 		}
 	}()
 
@@ -215,9 +229,9 @@ func (d database) queryContextOnce(ctx context.Context, sqlStringWithCallerInfo 
 
 	var err error
 	if interceptor == nil {
-		err = invoker(ctx, sqlStringWithCallerInfo)
+		err = invoker(ctx, sqlString)
 	} else {
-		err = interceptor(ctx, sqlStringWithCallerInfo, invoker)
+		err = interceptor(ctx, sqlString, invoker)
 	}
 	if err != nil {
 		return nil, err
@@ -230,6 +244,7 @@ func (d database) Execute(sqlString string) (sql.Result, error) {
 	return d.ExecuteContext(context.Background(), sqlString)
 }
 
+// ExecuteContext todo Is there need retry?
 func (d database) ExecuteContext(ctx context.Context, sqlString string) (sql.Result, error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -239,7 +254,7 @@ func (d database) ExecuteContext(ctx context.Context, sqlString string) (sql.Res
 	defer func() {
 		endTime := time.Now().UnixNano()
 		if d.logger != nil {
-			d.logger(sqlStringWithCallerInfo, endTime-startTime)
+			d.logger(sqlStringWithCallerInfo, endTime-startTime, false, false)
 		}
 	}()
 

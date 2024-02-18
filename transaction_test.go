@@ -176,6 +176,7 @@ func TestTransaction_Execute(t *testing.T) {
 // so we only insure there is no panic here.
 func TestTransaction_CRUD(t *testing.T) {
 	db := newMockDatabase()
+	db.EnableCallerInfo(true)
 	tx, err := db.Begin()
 	if err != nil {
 		t.Error(err)
