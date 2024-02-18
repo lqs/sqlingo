@@ -263,16 +263,19 @@ func (t transaction) Rollback() error {
 	return t.GetTx().Rollback()
 }
 
+// Savepoint todo defend sql injection
 func (t transaction) Savepoint(name string) error {
 	_, err := t.GetTx().Exec("SAVEPOINT " + name)
 	return err
 }
 
+// RollbackTo todo defend sql injection
 func (t transaction) RollbackTo(name string) error {
 	_, err := t.GetTx().Exec("ROLLBACK TO " + name)
 	return err
 }
 
+// ReleaseSavepoint todo defend sql injection
 func (t transaction) ReleaseSavepoint(name string) error {
 	_, err := t.GetTx().Exec("RELEASE SAVEPOINT " + name)
 	return err
