@@ -189,6 +189,9 @@ func (s selectStatus) RightJoin(table Table) selectWithJoin {
 	return s.join("RIGHT ", table)
 }
 
+// NaturalJoin joins the table using the NATURAL keyword.
+// it automatically matches the columns in the two tables that have the same name.
+// it not be needed but be provided for completeness.
 func (s selectStatus) NaturalJoin(table Table) selectWithJoinOn {
 	base := activeSelectBase(&s)
 	base.scope.lastJoin = &join{
@@ -479,6 +482,8 @@ func (s selectBase) buildSelectBase(sb *strings.Builder) error {
 			sb.WriteString(join.prefix)
 			sb.WriteString("JOIN ")
 			sb.WriteString(join.table.GetSQL(s.scope))
+			// cause on isn't a required part of join when using natural join,
+			// so move it to if statement
 			if join.on != nil {
 				onSql, err := join.on.GetSQL(s.scope)
 				if err != nil {

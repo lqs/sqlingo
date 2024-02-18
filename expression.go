@@ -142,6 +142,7 @@ func (e expression) GetTable() Table {
 }
 
 type scope struct {
+	// Transaction should be nil if without transaction begin
 	Transaction *transaction
 	Database    *database
 	Tables      []Table

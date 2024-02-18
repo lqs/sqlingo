@@ -7,6 +7,7 @@ import (
 )
 
 // Transaction is the interface of a transaction with underlying sql.Tx object.
+// It provides methods to execute DDL and TCL operations.
 type Transaction interface {
 	GetTx() *sql.Tx
 	Query(sql string) (Cursor, error)
@@ -67,12 +68,18 @@ func (d *database) BeginTx(ctx context.Context, opts *sql.TxOptions, f func(tx T
 	return nil
 }
 
+// Begin starts a new transaction and returning a Transaction object.
+// the DDL operations using the returned Transaction object will
+// regard as one time transaction.
+// User must manually call Commit() or Rollback() to end the transaction,
+// after that, more DDL operations or TCL will return error.
 func (d *database) Begin() (Transaction, error) {
 	var err error
 	tx, err := d.db.Begin()
 	if err != nil {
 		return nil, err
 	}
+	// copy extra to transaction
 	t := &transaction{
 		tx:               tx,
 		logger:           d.logger,

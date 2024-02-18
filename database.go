@@ -13,6 +13,7 @@ import (
 )
 
 const (
+	// for colorful terminal print
 	green = "\033[32m"
 	red   = "\033[31m"
 	blue  = "\033[34m"
@@ -57,6 +58,11 @@ type Database interface {
 	// Initiate a DELETE FROM statement
 	DeleteFrom(table Table) deleteWithTable
 
+	// Begin Start a new transaction and returning a Transaction object.
+	// the DDL operations using the returned Transaction object will
+	// regard as one time transaction.
+	// User must manually call Commit() or Rollback() to end the transaction,
+	// after that, more DDL operations or TCL will return error.
 	Begin() (Transaction, error)
 }
 
@@ -78,7 +84,10 @@ func (d *database) SetLogger(logger func(sql string, durationNano int64)) {
 	d.logger = logger
 }
 
+// defaultLogger is sqlingo default logger,
+// which print log to stderr and regard executing time gt 100ms as slow sql.
 func defaultLogger(sql string, durationNano int64) {
+	// for finding code position, try once is enough
 	once.Do(func() {
 		// $GOPATH/pkg/mod/github.com/lqs/sqlingo@vX.X.X/database.go
 		_, file, _, _ := runtime.Caller(0)
@@ -99,6 +108,7 @@ func defaultLogger(sql string, durationNano int64) {
 		}
 	}
 
+	// convert durationNano (int64) to time.Duration
 	du := time.Duration(durationNano)
 	// todo shouldn't append ';' here
 	if !strings.HasSuffix(sql, ";") {
@@ -113,6 +123,7 @@ func defaultLogger(sql string, durationNano int64) {
 		},
 		" ")
 
+	// print to stderr
 	fmt.Fprintln(os.Stderr, blue+line1+reset)
 	if du < 100*time.Millisecond {
 		fmt.Fprintf(os.Stderr, "%s%s%s\n", green, sql, reset)
