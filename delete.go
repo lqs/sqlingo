@@ -91,5 +91,12 @@ func (s deleteStatus) Execute() (sql.Result, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// use transaction if it exists, otherwise use database.
+	// this is because when s.scope.Transaction is not nil,
+	// it must be built by transaction.
+	if s.scope.Transaction != nil {
+		return s.scope.Transaction.Execute(sqlString)
+	}
 	return s.scope.Database.Execute(sqlString)
 }

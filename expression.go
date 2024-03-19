@@ -142,9 +142,11 @@ func (e expression) GetTable() Table {
 }
 
 type scope struct {
-	Database *database
-	Tables   []Table
-	lastJoin *join
+	// Transaction should be nil if without transaction begin
+	Transaction *transaction
+	Database    *database
+	Tables      []Table
+	lastJoin    *join
 }
 
 func staticExpression(sql string, priority priority, isBool bool) expression {
