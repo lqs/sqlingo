@@ -71,7 +71,7 @@ func convertToExportedIdentifier(s string, forceCases []string) string {
 	return result
 }
 
-func getType(fieldDescriptor fieldDescriptor) (goType string, fieldClass string, err error) {
+func getType(fieldDescriptor fieldDescriptor) (goType string, fieldClass string, fieldComment string, err error) {
 	switch strings.ToLower(fieldDescriptor.Type) {
 	case "tinyint":
 		goType = "int8"
@@ -103,10 +103,20 @@ func getType(fieldDescriptor fieldDescriptor) (goType string, fieldClass string,
 		// TODO: Switch to specific type instead of interface.
 		goType = "[]interface{}"
 		fieldClass = "ArrayField"
-	case "datetime", "timestamp":
+	case "timestamp":
 		if !timeAsString {
 			goType = "time.Time"
 			fieldClass = "DateField"
+			fieldComment = "NOTICE: the range of timestamp is [1970-01-01 08:00:01, 2038-01-19 11:14:07]"
+		} else {
+			goType = "string"
+			fieldClass = "StringField"
+		}
+	case "datetime":
+		if !timeAsString {
+			goType = "time.Time"
+			fieldClass = "DateField"
+			fieldComment = "NOTICE: the range of datetime is [0000-01-01 00:00:00, 2038-01-19 11:14:07]"
 		} else {
 			goType = "string"
 			fieldClass = "StringField"
@@ -332,7 +342,7 @@ func generateTable(schemaFetcher schemaFetcher, tableName string, forceCases []s
 	for _, fieldDescriptor := range fieldDescriptors {
 
 		goName := convertToExportedIdentifier(fieldDescriptor.Name, forceCases)
-		goType, fieldClass, err := getType(fieldDescriptor)
+		goType, fieldClass, typeComment, err := getType(fieldDescriptor)
 		if err != nil {
 			return "", err
 		}
@@ -342,6 +352,9 @@ func generateTable(schemaFetcher schemaFetcher, tableName string, forceCases []s
 		commentLine := ""
 		if fieldDescriptor.Comment != "" {
 			commentLine = "\t// " + strings.ReplaceAll(fieldDescriptor.Comment, "\n", " ") + "\n"
+		}
+		if typeComment != "" {
+			commentLine = "\t// " + typeComment + "\n"
 		}
 
 		fieldStructName := strings.ToLower(replaceTypeSpace(fieldDescriptor.Type)) + "_" + className + "_" + goName
