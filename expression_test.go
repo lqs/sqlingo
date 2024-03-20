@@ -122,6 +122,11 @@ func TestFunc(t *testing.T) {
 	assertValue(t, e.IsEmpty(), "<> = ''")
 	assertValue(t, e.Lower(), "LOWER(<>)")
 	assertValue(t, e.Upper(), "UPPER(<>)")
+	assertValue(t, e.Left(10), "LEFT(<>, 10)")
+	assertValue(t, e.Right(10), "RIGHT(<>, 10)")
+	assertValue(t, e.Trim(), "TRIM(<>)")
+	assertValue(t, e.HasPrefix("abc"), "LEFT(<>, CHAR_LENGTH('abc')) = 'abc'")
+	assertValue(t, e.HasSuffix("abc"), "RIGHT(<>, CHAR_LENGTH('abc')) = 'abc'")
 
 	e5 := expression{
 		builder: func(scope scope) (string, error) {

@@ -90,6 +90,9 @@ type StringExpression interface {
 	IsEmpty() BooleanExpression
 	Lower() StringExpression
 	Upper() StringExpression
+	Left(count interface{}) StringExpression
+	Right(count interface{}) StringExpression
+	Trim() StringExpression
 }
 
 type ArrayExpression interface {
@@ -126,6 +129,9 @@ type UnknownExpression interface {
 	IsEmpty() BooleanExpression
 	Lower() StringExpression
 	Upper() StringExpression
+	Left(count interface{}) StringExpression
+	Right(count interface{}) StringExpression
+	Trim() StringExpression
 }
 
 type expression struct {
@@ -245,6 +251,30 @@ func (e expression) Lower() StringExpression {
 
 func (e expression) Upper() StringExpression {
 	return function("UPPER", e)
+}
+
+func (e expression) Left(count interface{}) StringExpression {
+	return function("LEFT", e, count)
+}
+
+func (e expression) Right(count interface{}) StringExpression {
+	return function("RIGHT", e, count)
+}
+
+func (e expression) Trim() StringExpression {
+	return function("TRIM", e)
+}
+
+func (e expression) CharLength() NumberExpression {
+	return function("CHAR_LENGTH", e)
+}
+
+func (e expression) HasPrefix(prefix interface{}) BooleanExpression {
+	return e.Left(function("CHAR_LENGTH", prefix)).Equals(prefix)
+}
+
+func (e expression) HasSuffix(suffix interface{}) BooleanExpression {
+	return e.Right(function("CHAR_LENGTH", suffix)).Equals(suffix)
 }
 
 func (e expression) GetSQL(scope scope) (string, error) {
