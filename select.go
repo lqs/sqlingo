@@ -136,6 +136,7 @@ type toSelectFinal interface {
 	FetchExactlyOne(out ...interface{}) error
 	FetchAll(dest ...interface{}) (rows int, err error)
 	FetchCursor() (Cursor, error)
+	FetchSeq() func(yield func(row Scanner) bool) // use with "range over function" in Go 1.22
 }
 
 type join struct {
@@ -162,6 +163,31 @@ type selectStatus struct {
 	offset    int
 	ctx       context.Context
 	lock      string
+}
+
+type errorScanner struct {
+	err error
+}
+
+func (e errorScanner) Scan(dest ...interface{}) error {
+	return e.err
+}
+
+func (s selectStatus) FetchSeq() func(yield func(row Scanner) bool) {
+	return func(yield func(row Scanner) bool) {
+		cursor, err := s.FetchCursor()
+		if err != nil {
+			yield(errorScanner{err})
+			return
+		}
+
+		defer cursor.Close()
+		for cursor.Next() {
+			if !yield(cursor) {
+				break
+			}
+		}
+	}
 }
 
 type unionSelectStatus struct {

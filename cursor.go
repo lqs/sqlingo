@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+// Scanner is the interface that wraps the Scan method.
+type Scanner interface {
+	Scan(dest ...interface{}) error
+}
+
 // Cursor is the interface of a row cursor.
 type Cursor interface {
 	Next() bool

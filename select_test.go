@@ -222,6 +222,34 @@ func TestFetchAll(t *testing.T) {
 	}
 }
 
+func TestRangeFunc(t *testing.T) {
+	db := newMockDatabase()
+
+	oldColumnCount := sharedMockConn.columnCount
+	sharedMockConn.columnCount = 2
+	defer func() {
+		sharedMockConn.columnCount = oldColumnCount
+	}()
+
+	count := 0
+	seq := db.Select(field1, field2).From(Table1).FetchSeq()
+
+	// for row := range db.Select(field1, field2).From(Table1).FetchSeq() {}
+	seq(func(row Scanner) bool {
+		var f1 string
+		var f2 int
+		if err := row.Scan(&f1, &f2); err != nil {
+			t.Error(err)
+		}
+		count++
+		return true
+	})
+
+	if count != 10 {
+		t.Error(count)
+	}
+}
+
 func TestLock(t *testing.T) {
 	db := newMockDatabase()
 	table1 := NewTable("table1")
