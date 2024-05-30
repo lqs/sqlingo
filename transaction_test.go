@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/go-playground/assert/v2"
 	"testing"
 )
 
@@ -152,7 +151,9 @@ func TestTransaction_Execute(t *testing.T) {
 	if _, err = tx.Execute("SQL 1 NOT SET INTERCEPTOR"); err != nil {
 		t.Error(err)
 	}
-	assert.Equal(t, sqlCount["SQL 1 NOT SET INTERCEPTOR"], 0)
+	if sqlCount["SQL 1 NOT SET INTERCEPTOR"] != 0 {
+		t.Error()
+	}
 
 	if err = tx.Rollback(); err != nil {
 		t.Error(err)
@@ -165,7 +166,9 @@ func TestTransaction_Execute(t *testing.T) {
 	if _, err = tx.Execute("SQL 2 SET INTERCEPTOR"); err != nil {
 		t.Error(err)
 	}
-	assert.Equal(t, sqlCount["SQL 2 SET INTERCEPTOR"], 1)
+	if sqlCount["SQL 2 SET INTERCEPTOR"] != 1 {
+		t.Error()
+	}
 
 	if err = tx.Commit(); err != nil {
 		t.Error(err)
