@@ -87,9 +87,9 @@ func (d *database) SetLogger(loggerFunc LoggerFunc) {
 	d.logger = loggerFunc
 }
 
-// defaultLogger is sqlingo default logger,
+// DefaultLogger is sqlingo default logger,
 // which print log to stderr and regard executing time gt 100ms as slow sql.
-func defaultLogger(sql string, durationNano int64, isTx bool, retry bool) {
+func DefaultLogger(sql string, durationNano int64, isTx bool, retry bool) {
 	// for finding code position, try once is enough
 	once.Do(func() {
 		// $GOPATH/pkg/mod/github.com/lqs/sqlingo@vX.X.X/database.go
@@ -173,7 +173,6 @@ func Open(driverName string, dataSourceName string) (db Database, err error) {
 		}
 	}
 	db = Use(driverName, sqlDB)
-	db.SetLogger(defaultLogger)
 	return
 }
 
