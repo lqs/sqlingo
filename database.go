@@ -81,7 +81,7 @@ type database struct {
 	interceptor      InterceptorFunc
 }
 
-type LoggerFunc func(sql string, durationNano int64, isTx bool, retry bool)
+type LoggerFunc func(sql string, duration time.Duration, isTx bool, retry bool)
 
 func (d *database) SetLogger(loggerFunc LoggerFunc) {
 	d.logger = loggerFunc
@@ -89,7 +89,7 @@ func (d *database) SetLogger(loggerFunc LoggerFunc) {
 
 // DefaultLogger is sqlingo default logger,
 // which print log to stderr and regard executing time gt 100ms as slow sql.
-func DefaultLogger(sql string, durationNano int64, isTx bool, retry bool) {
+func DefaultLogger(sql string, duration time.Duration, isTx bool, retry bool) {
 	// for finding code position, try once is enough
 	once.Do(func() {
 		// $GOPATH/pkg/mod/github.com/lqs/sqlingo@vX.X.X/database.go
@@ -111,8 +111,6 @@ func DefaultLogger(sql string, durationNano int64, isTx bool, retry bool) {
 		}
 	}
 
-	// convert durationNano (int64) to time.Duration
-	du := time.Duration(durationNano)
 	// todo shouldn't append ';' here
 	if !strings.HasSuffix(sql, ";") {
 		sql += ";"
@@ -121,7 +119,7 @@ func DefaultLogger(sql string, durationNano int64, isTx bool, retry bool) {
 	sb := strings.Builder{}
 	sb.Grow(32)
 	sb.WriteString("|")
-	sb.WriteString(du.String())
+	sb.WriteString(duration.String())
 	if isTx {
 		sb.WriteString("|transaction") // todo using something traceable
 	}
@@ -141,7 +139,7 @@ func DefaultLogger(sql string, durationNano int64, isTx bool, retry bool) {
 
 	// print to stderr
 	fmt.Fprintln(os.Stderr, blue+line1+reset)
-	if du < 100*time.Millisecond {
+	if duration < 100*time.Millisecond {
 		fmt.Fprintf(os.Stderr, "%s%s%s\n", green, sql, reset)
 	} else {
 		fmt.Fprintf(os.Stderr, "%s%s%s\n", red, sql, reset)
@@ -212,11 +210,11 @@ func (d database) queryContextOnce(ctx context.Context, sqlString string, retry 
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	startTime := time.Now().UnixNano()
+	startTime := time.Now()
 	defer func() {
-		endTime := time.Now().UnixNano()
+		endTime := time.Now()
 		if d.logger != nil {
-			d.logger(sqlString, endTime-startTime, false, retry)
+			d.logger(sqlString, endTime.Sub(startTime), false, retry)
 		}
 	}()
 
@@ -250,11 +248,11 @@ func (d database) ExecuteContext(ctx context.Context, sqlString string) (sql.Res
 		ctx = context.Background()
 	}
 	sqlStringWithCallerInfo := getCallerInfo(d, false) + sqlString
-	startTime := time.Now().UnixNano()
+	startTime := time.Now()
 	defer func() {
-		endTime := time.Now().UnixNano()
+		endTime := time.Now()
 		if d.logger != nil {
-			d.logger(sqlStringWithCallerInfo, endTime-startTime, false, false)
+			d.logger(sqlStringWithCallerInfo, endTime.Sub(startTime), false, false)
 		}
 	}()
 

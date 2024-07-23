@@ -6,6 +6,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"testing"
+	"time"
 )
 
 func (m *mockConn) Prepare(query string) (driver.Stmt, error) {
@@ -72,7 +73,7 @@ func TestDatabase(t *testing.T) {
 		interceptorExecutedCount++
 		return invoker(ctx, sql)
 	})
-	db.SetLogger(func(sql string, durationNano int64, _, _ bool) {
+	db.SetLogger(func(sql string, _ time.Duration, _, _ bool) {
 		if sql != "SELECT 1" {
 			t.Error(sql)
 		}

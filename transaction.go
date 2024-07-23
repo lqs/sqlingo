@@ -129,11 +129,11 @@ func (t transaction) queryContextOnce(ctx context.Context, sqlStringWithCallerIn
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	startTime := time.Now().UnixNano()
+	startTime := time.Now()
 	defer func() {
-		endTime := time.Now().UnixNano()
+		endTime := time.Now()
 		if t.logger != nil {
-			t.logger(sqlStringWithCallerInfo, endTime-startTime, true, false)
+			t.logger(sqlStringWithCallerInfo, endTime.Sub(startTime), true, false)
 		}
 	}()
 
@@ -165,11 +165,11 @@ func (t transaction) ExecuteContext(ctx context.Context, sqlString string) (sql.
 		ctx = context.Background()
 	}
 	sqlStringWithCallerInfo := getTxCallerInfo(t, false) + sqlString
-	startTime := time.Now().UnixNano()
+	startTime := time.Now()
 	defer func() {
-		endTime := time.Now().UnixNano()
+		endTime := time.Now()
 		if t.logger != nil {
-			t.logger(sqlStringWithCallerInfo, endTime-startTime, true, false)
+			t.logger(sqlStringWithCallerInfo, endTime.Sub(startTime), true, false)
 		}
 	}()
 
