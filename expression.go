@@ -615,7 +615,19 @@ func (e expression) prefixSuffixExpression(prefix string, suffix string, priorit
 			if err != nil {
 				return "", err
 			}
-			return prefix + exprSql + suffix, nil
+			var sb strings.Builder
+			sb.Grow(len(prefix) + len(exprSql) + len(suffix) + 2)
+			sb.WriteString(prefix)
+			shouldParenthesize := e.priority > priority
+			if shouldParenthesize {
+				sb.WriteByte('(')
+			}
+			sb.WriteString(exprSql)
+			if shouldParenthesize {
+				sb.WriteByte(')')
+			}
+			sb.WriteString(suffix)
+			return sb.String(), nil
 		},
 		priority: priority,
 		isBool:   isBool,

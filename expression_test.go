@@ -190,6 +190,7 @@ func TestLogicalExpression(t *testing.T) {
 	assertValue(t, Or(a, b, c, d), "a OR b OR c OR d")
 	assertValue(t, a.And(b).Or(c).And(a).Or(b).And(c), "((a AND b OR c) AND a OR b) AND c")
 	assertValue(t, a.Or(b).And(c.Or(d)), "(a OR b) AND (c OR d)")
+	assertValue(t, a.Or(b).And(c).Not(), "NOT ((a OR b) AND c)")
 
 	assertValue(t, And(), "1")
 	assertValue(t, Or(), "0")
