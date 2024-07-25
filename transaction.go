@@ -227,7 +227,6 @@ func (t transaction) SelectFrom(tables ...Table) selectWithTables {
 
 func (t transaction) InsertInto(table Table) insertWithTable {
 	return insertStatus{
-		method: "INSERT",
 		scope: scope{
 			Transaction: &t,
 			Tables:      []Table{table},
