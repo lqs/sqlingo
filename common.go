@@ -144,29 +144,6 @@ func getCallerInfo(db database, retry bool) string {
 		return ""
 	}
 	extraInfo := ""
-	if retry {
-		extraInfo += " (retry)"
-	}
-	for i := 0; true; i++ {
-		_, file, line, ok := runtime.Caller(i)
-		if !ok {
-			break
-		}
-		if file == "" || strings.Contains(file, "/sqlingo@v") {
-			continue
-		}
-		segs := strings.Split(file, "/")
-		name := segs[len(segs)-1]
-		return fmt.Sprintf("/* %s:%d%s */ ", name, line, extraInfo)
-	}
-	return ""
-}
-
-func getTxCallerInfo(db transaction, retry bool) string {
-	if !db.enableCallerInfo {
-		return ""
-	}
-	extraInfo := ""
 	if db.tx != nil {
 		extraInfo += " (tx)"
 	}

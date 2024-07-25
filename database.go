@@ -58,13 +58,11 @@ type Database interface {
 	Update(table Table) updateWithSet
 	// Initiate a DELETE FROM statement
 	DeleteFrom(table Table) deleteWithTable
+}
 
-	// Begin Start a new transaction and returning a Transaction object.
-	// the DDL operations using the returned Transaction object will
-	// regard as one time transaction.
-	// User must manually call Commit() or Rollback() to end the transaction,
-	// after that, more DDL operations or TCL will return error.
-	Begin() (Transaction, error)
+type txOrDB interface {
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 }
 
 var (
@@ -74,6 +72,7 @@ var (
 
 type database struct {
 	db               *sql.DB
+	tx               *sql.Tx
 	logger           LoggerFunc
 	dialect          dialect
 	retryPolicy      func(error) bool
@@ -186,6 +185,13 @@ func (d database) GetDB() *sql.DB {
 	return d.db
 }
 
+func (d database) getTxOrDB() txOrDB {
+	if d.tx != nil {
+		return d.tx
+	}
+	return d.db
+}
+
 func (d database) Query(sqlString string) (Cursor, error) {
 	return d.QueryContext(context.Background(), sqlString)
 }
@@ -196,7 +202,7 @@ func (d database) QueryContext(ctx context.Context, sqlString string) (Cursor, e
 		sqlStringWithCallerInfo := getCallerInfo(d, isRetry) + sqlString
 		rows, err := d.queryContextOnce(ctx, sqlStringWithCallerInfo, isRetry)
 		if err != nil {
-			isRetry = d.retryPolicy != nil && d.retryPolicy(err)
+			isRetry = d.tx == nil && d.retryPolicy != nil && d.retryPolicy(err)
 			if isRetry {
 				continue
 			}
@@ -221,7 +227,7 @@ func (d database) queryContextOnce(ctx context.Context, sqlString string, retry 
 	interceptor := d.interceptor
 	var rows *sql.Rows
 	invoker := func(ctx context.Context, sql string) (err error) {
-		rows, err = d.GetDB().QueryContext(ctx, sql)
+		rows, err = d.getTxOrDB().QueryContext(ctx, sql)
 		return
 	}
 
@@ -258,7 +264,7 @@ func (d database) ExecuteContext(ctx context.Context, sqlString string) (sql.Res
 
 	var result sql.Result
 	invoker := func(ctx context.Context, sql string) (err error) {
-		result, err = d.GetDB().ExecContext(ctx, sql)
+		result, err = d.getTxOrDB().ExecContext(ctx, sql)
 		return
 	}
 	var err error

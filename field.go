@@ -61,9 +61,7 @@ func newField(table Table, fieldName string) actualField {
 		expression: expression{
 			builder: func(scope scope) (string, error) {
 				dialect := dialectUnknown
-				if scope.Transaction != nil {
-					dialect = scope.Transaction.dialect
-				} else if scope.Database != nil {
+				if scope.Database != nil {
 					dialect = scope.Database.dialect
 				}
 				if len(scope.Tables) != 1 || scope.lastJoin != nil || scope.Tables[0].GetName() != tableName {

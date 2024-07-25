@@ -24,9 +24,6 @@ func (t table) GetName() string {
 }
 
 func (t table) GetSQL(scope scope) string {
-	if scope.Transaction != nil {
-		return t.sqlDialects[scope.Transaction.dialect]
-	}
 	return t.sqlDialects[scope.Database.dialect]
 }
 

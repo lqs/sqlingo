@@ -2,7 +2,6 @@ package sqlingo
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"testing"
 )
@@ -29,6 +28,9 @@ func (m *mockTx) Rollback() error {
 func TestTransaction(t *testing.T) {
 	db := newMockDatabase()
 	err := db.BeginTx(nil, nil, func(tx Transaction) error {
+		if tx.GetDB() != db.GetDB() {
+			t.Error()
+		}
 		if tx.GetTx() == nil {
 			t.Error()
 		}
@@ -78,143 +80,4 @@ func TestTransaction(t *testing.T) {
 	if err == nil {
 		t.Error("should get error here")
 	}
-}
-
-func TestTransaction_Commit(t *testing.T) {
-	db := newMockDatabase()
-	tx, err := db.Begin()
-	if err != nil {
-		t.Error(err)
-	}
-
-	if err = tx.Commit(); err != nil {
-		t.Error(err)
-	}
-
-	if !sharedMockConn.mockTx.isCommitted {
-		t.Error()
-	}
-}
-
-func TestTransaction_Rollback(t *testing.T) {
-	db := newMockDatabase()
-	tx, err := db.Begin()
-	if err != nil {
-		t.Error(err)
-	}
-
-	if err = tx.Rollback(); err != nil {
-		t.Error(err)
-	}
-	if !sharedMockConn.mockTx.isRolledBack {
-		t.Error()
-	}
-}
-
-func TestTransaction_Done(t *testing.T) {
-	db := newMockDatabase()
-	tx, err := db.Begin()
-	if err != nil {
-		t.Error(err)
-	}
-
-	if err = tx.Commit(); err != nil {
-		t.Error(err)
-	}
-
-	if err = tx.Rollback(); !errors.Is(err, sql.ErrTxDone) {
-		t.Error(err)
-	}
-
-	if err = tx.Commit(); !errors.Is(err, sql.ErrTxDone) {
-		t.Error(err)
-	}
-
-	if _, err = tx.Select(1).FetchAll(); !errors.Is(err, sql.ErrTxDone) {
-		t.Error(err)
-	}
-}
-
-func TestTransaction_Execute(t *testing.T) {
-	var sqlCount = make(map[string]int)
-	db := newMockDatabase()
-
-	tx, err := db.Begin()
-	if err != nil {
-		t.Error(err)
-	}
-	db.SetInterceptor(func(ctx context.Context, sql string, invoker InvokerFunc) error {
-		sqlCount[sql]++
-		return invoker(ctx, sql)
-	})
-
-	if _, err = tx.Execute("SQL 1 NOT SET INTERCEPTOR"); err != nil {
-		t.Error(err)
-	}
-	if sqlCount["SQL 1 NOT SET INTERCEPTOR"] != 0 {
-		t.Error()
-	}
-
-	if err = tx.Rollback(); err != nil {
-		t.Error(err)
-	}
-
-	tx, err = db.Begin()
-	if err != nil {
-		t.Error(err)
-	}
-	if _, err = tx.Execute("SQL 2 SET INTERCEPTOR"); err != nil {
-		t.Error(err)
-	}
-	if sqlCount["SQL 2 SET INTERCEPTOR"] != 1 {
-		t.Error()
-	}
-
-	if err = tx.Commit(); err != nil {
-		t.Error(err)
-	}
-}
-
-// TestTransaction_CRUD tests the CRUD operations in a transaction, cause sql build is tested on database,
-// so we only insure there is no panic here.
-func TestTransaction_CRUD(t *testing.T) {
-	db := newMockDatabase()
-	db.EnableCallerInfo(true)
-	tx, err := db.Begin()
-	if err != nil {
-		t.Error(err)
-	}
-	_, err = tx.Select().From(table1).FetchAll()
-	if err != nil {
-		t.Error(err)
-	}
-
-	if _, err = tx.SelectFrom(table1).FetchAll(); err != nil {
-		t.Error(err)
-	}
-
-	if _, err = tx.SelectDistinct(field2).From(table1).FetchAll(); err != nil {
-		t.Error(err)
-	}
-
-	if _, err = tx.InsertInto(Test).Values(1, 2).Execute(); err != nil {
-		t.Error(err)
-	}
-
-	if _, err = tx.ReplaceInto(Test).Values(1, 2).Execute(); err != nil {
-		t.Error(err)
-	}
-
-	if _, err = tx.DeleteFrom(table1).Where().Execute(); err != nil {
-		t.Error(err)
-	}
-
-	if _, err = tx.Update(table1).Set(field1, 1).Where().Execute(); err != nil {
-		t.Error(err)
-	}
-
-	if err = tx.Rollback(); err != nil {
-		t.Error(err)
-	}
-
 }

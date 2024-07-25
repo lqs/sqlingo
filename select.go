@@ -610,17 +610,11 @@ func (s selectStatus) FetchCursor() (Cursor, error) {
 		return nil, err
 	}
 
-	var c Cursor
-	if s.base.scope.Transaction != nil {
-		c, err = s.base.scope.Transaction.QueryContext(s.ctx, sqlString)
-	} else {
-		c, err = s.base.scope.Database.QueryContext(s.ctx, sqlString)
-	}
-
+	cursor, err := s.base.scope.Database.QueryContext(s.ctx, sqlString)
 	if err != nil {
 		return nil, err
 	}
-	return c, nil
+	return cursor, nil
 }
 
 func (s selectStatus) FetchFirst(dest ...interface{}) (ok bool, err error) {
