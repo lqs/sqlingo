@@ -101,8 +101,8 @@ func getType(fieldDescriptor fieldDescriptor) (goType string, fieldClass string,
 		fieldClass = "StringField"
 	case "array":
 		// TODO: Switch to specific type instead of interface.
-		goType = "[]interface{}"
-		fieldClass = "ArrayField"
+		goType = "string"
+		fieldClass = "StringField"
 	case "timestamp":
 		if !timeAsString {
 			goType = "time.Time"
@@ -132,6 +132,9 @@ func getType(fieldDescriptor fieldDescriptor) (goType string, fieldClass string,
 			goType = "string"
 			fieldClass = "StringField"
 		}
+	case "user-defined":
+		goType = "string"
+		fieldClass = "StringField"
 	default:
 		err = fmt.Errorf("unknown field type %s", fieldDescriptor.Type)
 		return
@@ -245,10 +248,6 @@ func Generate(driverName string, exampleDataSourceName string) (string, error) {
 
 	code += "type booleanField interface {\n"
 	code += "\tsqlingo.BooleanField\n"
-	code += "}\n\n"
-
-	code += "type arrayField interface {\n"
-	code += "\tsqlingo.ArrayField\n"
 	code += "}\n\n"
 
 	code += "type dateField interface {\n"
@@ -435,5 +434,6 @@ func generateTable(schemaFetcher schemaFetcher, tableName string, forceCases []s
 // replaceTypeSpace : To compatible some types contains spaces in postgresql
 // like [character varying, timestamp without time zone, timestamp with time zone]
 func replaceTypeSpace(typename string) string {
-	return strings.ReplaceAll(typename, " ", "_")
+	typename = strings.ReplaceAll(typename, " ", "_")
+	return strings.ReplaceAll(typename, "-", "_")
 }
