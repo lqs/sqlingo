@@ -209,3 +209,25 @@ func TestCursorMap(t *testing.T) {
 		t.Error()
 	}
 }
+
+func TestParseTime(t *testing.T) {
+	tests := []struct {
+		input  string
+		output time.Time
+	}{
+		{"2024-09-06 11:22:33", time.Date(2024, 9, 6, 11, 22, 33, 0, time.UTC)},
+		{"2024-09-06 11:22:33.444", time.Date(2024, 9, 6, 11, 22, 33, 444000000, time.UTC)},
+		{"2024-09-06 11:22:33.444555666", time.Date(2024, 9, 6, 11, 22, 33, 444555666, time.UTC)},
+		{"2024-09-06T11:22:33.444555666Z", time.Date(2024, 9, 6, 11, 22, 33, 444555666, time.UTC)},
+	}
+	for _, test := range tests {
+		tm, err := parseTime(test.input)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+		if tm != test.output {
+			t.Error(tm, test.output)
+		}
+	}
+}

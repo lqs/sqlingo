@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -31,23 +33,32 @@ func (c cursor) Next() bool {
 
 var timeType = reflect.TypeOf(time.Time{})
 
-var timeLayouts = []string{
-	"2006-01-02",
-	"2006-01-02 15:04:05",
-	"2006-01-02 15:04:05.000",
-	"2006-01-02 15:04:05.000000",
-	"2006-01-02 15:04:05.000000000",
-	time.RFC3339Nano,
+var simpleTimeLayoutRegexp = regexp.MustCompile(`^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.(\d+))?$`)
+
+func guessTimeLayout(s string) string {
+	matches := simpleTimeLayoutRegexp.FindStringSubmatch(s)
+	if len(matches) > 0 {
+		var sb strings.Builder
+		sb.Grow(32)
+		sb.WriteString("2006-01-02 15:04:05")
+		if matches[1] != "" {
+			sb.WriteString(".")
+			for i := 0; i < len(matches[2]); i++ {
+				sb.WriteByte('0')
+			}
+		}
+		return sb.String()
+	}
+	return time.RFC3339Nano
 }
 
 func parseTime(s string) (time.Time, error) {
-	for _, layout := range timeLayouts {
-		t, err := time.Parse(layout, s)
-		if err == nil {
-			return t, nil
-		}
+	layout := guessTimeLayout(s)
+	t, err := time.Parse(layout, s)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("unknown time format %s: %w", s, err)
 	}
-	return time.Time{}, fmt.Errorf("unknown time format %s", s)
+	return t, nil
 }
 
 func isScanner(val reflect.Value) bool {

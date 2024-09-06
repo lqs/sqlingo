@@ -328,6 +328,7 @@ func quoteString(s string) string {
 }
 
 func getSQL(scope scope, value interface{}) (sql string, priority priority, err error) {
+	const mysqlTimeFormat = "2006-01-02 15:04:05.000000"
 	if value == nil {
 		sql = "NULL"
 		return
@@ -355,14 +356,14 @@ func getSQL(scope scope, value interface{}) (sql string, priority priority, err 
 	case CaseExpression:
 		sql, err = value.(CaseExpression).End().GetSQL(scope)
 	case time.Time:
-		tmStr := value.(time.Time).Format("2006-01-02 15:04:05")
+		tmStr := value.(time.Time).Format(mysqlTimeFormat)
 		sql = quoteString(tmStr)
 	case *time.Time:
 		tm := value.(*time.Time)
 		if tm == nil {
 			sql = "NULL"
 		} else {
-			tmStr := tm.Format("2006-01-02 15:04:05")
+			tmStr := tm.Format(mysqlTimeFormat)
 			sql = quoteString(tmStr)
 		}
 	default:
