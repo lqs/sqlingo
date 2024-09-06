@@ -53,6 +53,10 @@ func guessTimeLayout(s string) string {
 }
 
 func parseTime(s string) (time.Time, error) {
+	if strings.HasPrefix(s, "0000-00-00") {
+		// MySQL zero date
+		return time.Time{}, nil
+	}
 	layout := guessTimeLayout(s)
 	t, err := time.Parse(layout, s)
 	if err != nil {

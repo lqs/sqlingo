@@ -356,11 +356,16 @@ func getSQL(scope scope, value interface{}) (sql string, priority priority, err 
 	case CaseExpression:
 		sql, err = value.(CaseExpression).End().GetSQL(scope)
 	case time.Time:
-		tmStr := value.(time.Time).Format(mysqlTimeFormat)
-		sql = quoteString(tmStr)
+		tm := value.(time.Time)
+		if tm.IsZero() {
+			sql = "NULL"
+		} else {
+			tmStr := tm.Format(mysqlTimeFormat)
+			sql = quoteString(tmStr)
+		}
 	case *time.Time:
 		tm := value.(*time.Time)
-		if tm == nil {
+		if tm == nil || tm.IsZero() {
 			sql = "NULL"
 		} else {
 			tmStr := tm.Format(mysqlTimeFormat)

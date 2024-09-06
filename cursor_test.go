@@ -219,6 +219,7 @@ func TestParseTime(t *testing.T) {
 		{"2024-09-06 11:22:33.444", time.Date(2024, 9, 6, 11, 22, 33, 444000000, time.UTC)},
 		{"2024-09-06 11:22:33.444555666", time.Date(2024, 9, 6, 11, 22, 33, 444555666, time.UTC)},
 		{"2024-09-06T11:22:33.444555666Z", time.Date(2024, 9, 6, 11, 22, 33, 444555666, time.UTC)},
+		{"0000-00-00 00:00:00", time.Time{}},
 	}
 	for _, test := range tests {
 		tm, err := parseTime(test.input)
