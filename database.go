@@ -22,41 +22,43 @@ const (
 
 // Database is the interface of a database with underlying sql.DB object.
 type Database interface {
-	// Get the underlying sql.DB object of the database
+	// GetDB returns the underlying sql.DB object of the database
 	GetDB() *sql.DB
+	// BeginTx starts a transaction and executes the function f.
 	BeginTx(ctx context.Context, opts *sql.TxOptions, f func(tx Transaction) error) error
-	// Executes a query and return the cursor
+	// Query executes a query and returns the cursor
 	Query(sql string) (Cursor, error)
-	// Executes a query with context and return the cursor
+	// QueryContext executes a query with context and returns the cursor
 	QueryContext(ctx context.Context, sqlString string) (Cursor, error)
-	// Executes a statement
+	// Execute executes a statement
 	Execute(sql string) (sql.Result, error)
-	// Executes a statement with context
+	// ExecuteContext executes a statement with context
 	ExecuteContext(ctx context.Context, sql string) (sql.Result, error)
-	// Set the logger function
+	// SetLogger sets the logger function.
+	// Deprecated: use SetInterceptor instead
 	SetLogger(logger LoggerFunc)
-	// Set the retry policy function.
-	// The retry policy function returns true if needs retry.
+	// SetRetryPolicy sets the retry policy function.
+	// Deprecated: use SetInterceptor instead
 	SetRetryPolicy(retryPolicy func(err error) bool)
 	// EnableCallerInfo enable or disable the caller info in the log.
-	// Deprecated: use SetLogger instead
+	// Deprecated: use SetInterceptor instead
 	EnableCallerInfo(enableCallerInfo bool)
-	// Set a interceptor function
+	// SetInterceptor sets an interceptor function
 	SetInterceptor(interceptor InterceptorFunc)
 
-	// Initiate a SELECT statement
+	// Select initiates a SELECT statement
 	Select(fields ...interface{}) selectWithFields
-	// Initiate a SELECT DISTINCT statement
+	// SelectDistinct initiates a SELECT DISTINCT statement
 	SelectDistinct(fields ...interface{}) selectWithFields
-	// Initiate a SELECT * FROM statement
+	// SelectFrom initiates a SELECT * FROM statement
 	SelectFrom(tables ...Table) selectWithTables
-	// Initiate a INSERT INTO statement
+	// InsertInto initiates a INSERT INTO statement
 	InsertInto(table Table) insertWithTable
-	// Initiate a REPLACE INTO statement
+	// ReplaceInto initiates a REPLACE INTO statement
 	ReplaceInto(table Table) insertWithTable
-	// Initiate a UPDATE statement
+	// Update initiates a UPDATE statement
 	Update(table Table) updateWithSet
-	// Initiate a DELETE FROM statement
+	// DeleteFrom initiates a DELETE FROM statement
 	DeleteFrom(table Table) deleteWithTable
 }
 
