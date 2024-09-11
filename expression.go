@@ -101,6 +101,8 @@ type ArrayExpression interface {
 
 type DateExpression interface {
 	Expression
+	Min() UnknownExpression
+	Max() UnknownExpression
 }
 
 // UnknownExpression is the interface of an SQL expression with unknown value.
