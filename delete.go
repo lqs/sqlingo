@@ -1,6 +1,7 @@
 package sqlingo
 
 import (
+	"context"
 	"database/sql"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ type deleteStatus struct {
 	where    BooleanExpression
 	orderBys []OrderBy
 	limit    *int
+	ctx      context.Context
 }
 
 type deleteWithTable interface {
@@ -18,18 +20,25 @@ type deleteWithTable interface {
 }
 
 type deleteWithWhere interface {
+	toDeleteWithContext
 	toDeleteFinal
 	OrderBy(orderBys ...OrderBy) deleteWithOrder
 	Limit(limit int) deleteWithLimit
 }
 
 type deleteWithOrder interface {
+	toDeleteWithContext
 	toDeleteFinal
 	Limit(limit int) deleteWithLimit
 }
 
 type deleteWithLimit interface {
+	toDeleteWithContext
 	toDeleteFinal
+}
+
+type toDeleteWithContext interface {
+	WithContext(ctx context.Context) toDeleteFinal
 }
 
 type toDeleteFinal interface {
@@ -86,10 +95,15 @@ func (s deleteStatus) GetSQL() (string, error) {
 	return sb.String(), nil
 }
 
+func (s deleteStatus) WithContext(ctx context.Context) toDeleteFinal {
+	s.ctx = ctx
+	return s
+}
+
 func (s deleteStatus) Execute() (sql.Result, error) {
 	sqlString, err := s.GetSQL()
 	if err != nil {
 		return nil, err
 	}
-	return s.scope.Database.Execute(sqlString)
+	return s.scope.Database.ExecuteContext(s.ctx, sqlString)
 }

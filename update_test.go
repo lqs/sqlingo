@@ -1,6 +1,7 @@
 package sqlingo
 
 import (
+	"context"
 	"errors"
 	"testing"
 )
@@ -62,4 +63,11 @@ func TestUpdate(t *testing.T) {
 		t.Error("should get error here")
 	}
 
+	if _, err := db.Update(Table1).
+		Set(field1, 10).
+		Where(True()).
+		WithContext(context.Background()).
+		Execute(); err != nil {
+		t.Error(err)
+	}
 }

@@ -1,6 +1,7 @@
 package sqlingo
 
 import (
+	"context"
 	"errors"
 	"testing"
 )
@@ -30,4 +31,9 @@ func TestDelete(t *testing.T) {
 		t.Error(err)
 	}
 	assertLastSql(t, "DELETE FROM `table1` WHERE #1# ORDER BY #2# LIMIT 3")
+
+	if _, err := db.DeleteFrom(Table1).Where(Raw("#1#")).WithContext(context.Background()).Execute(); err != nil {
+		t.Error(err)
+	}
+	assertLastSql(t, "DELETE FROM `table1` WHERE #1#")
 }

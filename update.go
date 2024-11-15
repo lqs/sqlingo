@@ -1,6 +1,7 @@
 package sqlingo
 
 import (
+	"context"
 	"database/sql"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ type updateStatus struct {
 	where       BooleanExpression
 	orderBys    []OrderBy
 	limit       *int
+	ctx         context.Context
 }
 
 func (d *database) Update(table Table) updateWithSet {
@@ -27,18 +29,25 @@ type updateWithSet interface {
 }
 
 type updateWithWhere interface {
+	toUpdateWithContext
 	toUpdateFinal
 	OrderBy(orderBys ...OrderBy) updateWithOrder
 	Limit(limit int) updateWithLimit
 }
 
 type updateWithOrder interface {
+	toUpdateWithContext
 	toUpdateFinal
 	Limit(limit int) updateWithLimit
 }
 
 type updateWithLimit interface {
+	toUpdateWithContext
 	toUpdateFinal
+}
+
+type toUpdateWithContext interface {
+	WithContext(ctx context.Context) toUpdateFinal
 }
 
 type toUpdateFinal interface {
@@ -120,10 +129,15 @@ func (s updateStatus) GetSQL() (string, error) {
 	return sb.String(), nil
 }
 
+func (s updateStatus) WithContext(ctx context.Context) toUpdateFinal {
+	s.ctx = ctx
+	return s
+}
+
 func (s updateStatus) Execute() (sql.Result, error) {
 	sqlString, err := s.GetSQL()
 	if err != nil {
 		return nil, err
 	}
-	return s.scope.Database.Execute(sqlString)
+	return s.scope.Database.ExecuteContext(s.ctx, sqlString)
 }

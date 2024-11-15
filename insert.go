@@ -1,6 +1,7 @@
 package sqlingo
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ type insertStatus struct {
 	values                          []interface{}
 	models                          []interface{}
 	onDuplicateKeyUpdateAssignments []assignment
+	ctx                             context.Context
 }
 
 type insertWithTable interface {
@@ -23,6 +25,7 @@ type insertWithTable interface {
 }
 
 type insertWithValues interface {
+	toInsertWithContext
 	toInsertFinal
 	Values(values ...interface{}) insertWithValues
 	OnDuplicateKeyIgnore() toInsertFinal
@@ -30,6 +33,7 @@ type insertWithValues interface {
 }
 
 type insertWithModels interface {
+	toInsertWithContext
 	toInsertFinal
 	Models(models ...interface{}) insertWithModels
 	OnDuplicateKeyIgnore() toInsertFinal
@@ -42,9 +46,14 @@ type insertWithOnDuplicateKeyUpdateBegin interface {
 }
 
 type insertWithOnDuplicateKeyUpdate interface {
+	toInsertWithContext
 	toInsertFinal
 	Set(Field Field, value interface{}) insertWithOnDuplicateKeyUpdate
 	SetIf(condition bool, Field Field, value interface{}) insertWithOnDuplicateKeyUpdate
+}
+
+type toInsertWithContext interface {
+	WithContext(ctx context.Context) toInsertFinal
 }
 
 type toInsertFinal interface {
@@ -182,10 +191,15 @@ func (s insertStatus) GetSQL() (string, error) {
 	return sqlString, nil
 }
 
+func (s insertStatus) WithContext(ctx context.Context) toInsertFinal {
+	s.ctx = ctx
+	return s
+}
+
 func (s insertStatus) Execute() (result sql.Result, err error) {
 	sqlString, err := s.GetSQL()
 	if err != nil {
 		return nil, err
 	}
-	return s.scope.Database.Execute(sqlString)
+	return s.scope.Database.ExecuteContext(s.ctx, sqlString)
 }

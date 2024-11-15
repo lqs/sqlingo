@@ -1,6 +1,7 @@
 package sqlingo
 
 import (
+	"context"
 	"errors"
 	"testing"
 )
@@ -141,5 +142,9 @@ func TestInsert(t *testing.T) {
 		Fields(Test.F1).Values(1).
 		OnDuplicateKeyUpdate().Set(Test.F1, errExpr).Execute(); err == nil {
 		t.Error("should get error here")
+	}
+
+	if _, err := db.InsertInto(Test).Fields(Test.F1).Values(1).WithContext(context.Background()).Execute(); err != nil {
+		t.Error(err)
 	}
 }
