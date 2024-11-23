@@ -71,12 +71,10 @@ func (s deleteStatus) GetSQL() (string, error) {
 
 	sb.WriteString("DELETE FROM ")
 	sb.WriteString(s.scope.Tables[0].GetSQL(s.scope))
-	sb.WriteString(" WHERE ")
-	whereSql, err := s.where.GetSQL(s.scope)
-	if err != nil {
+
+	if err := appendWhere(&sb, s.scope, s.where); err != nil {
 		return "", err
 	}
-	sb.WriteString(whereSql)
 
 	if len(s.orderBys) > 0 {
 		orderBySql, err := commaOrderBys(s.scope, s.orderBys)

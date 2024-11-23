@@ -4,6 +4,13 @@ import "testing"
 
 var dummyMySQLScope = scope{Database: &database{dialect: dialectMySQL}}
 
+func assertEqual(t *testing.T, actualValue string, expectedValue string) {
+	t.Helper()
+	if actualValue != expectedValue {
+		t.Errorf("actual [%s] expected [%s]", actualValue, expectedValue)
+	}
+}
+
 func assertValue(t *testing.T, value interface{}, expectedSql string) {
 	t.Helper()
 	if generatedSql, _, _ := getSQL(dummyMySQLScope, value); generatedSql != expectedSql {

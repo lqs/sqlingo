@@ -90,17 +90,18 @@ func TestFunc(t *testing.T) {
 	assertValue(t, e.Between(2, 4), "<> BETWEEN 2 AND 4")
 	assertValue(t, e.NotBetween(2, 4), "<> NOT BETWEEN 2 AND 4")
 
-	assertValue(t, e.In(), "0")
+	assertValue(t, e.In(), "FALSE")
 	assertValue(t, e.In(1), "<> = 1")
 	assertValue(t, e.In(1, 2, 3), "<> IN (1, 2, 3)")
-	assertValue(t, e.In([]int64{}), "0")
+	assertValue(t, e.In([]int64{}), "FALSE")
 	assertValue(t, e.In([]int64{1}), "<> = 1")
 	assertValue(t, e.In([]int64{1, 2, 3}), "<> IN (1, 2, 3)")
+	assertValue(t, e.In([]byte{1, 2, 3}), "<> IN (1, 2, 3)")
 
-	assertValue(t, e.NotIn(), "1")
+	assertValue(t, e.NotIn(), "TRUE")
 	assertValue(t, e.NotIn(1), "<> <> 1")
 	assertValue(t, e.NotIn(1, 2, 3), "<> NOT IN (1, 2, 3)")
-	assertValue(t, e.NotIn([]int64{}), "1")
+	assertValue(t, e.NotIn([]int64{}), "TRUE")
 	assertValue(t, e.NotIn([]int64{1}), "<> <> 1")
 	assertValue(t, e.NotIn([]int64{1, 2, 3}), "<> NOT IN (1, 2, 3)")
 
@@ -171,8 +172,8 @@ func TestFunc(t *testing.T) {
 }
 
 func TestMisc(t *testing.T) {
-	assertValue(t, True(), "1")
-	assertValue(t, False(), "0")
+	assertValue(t, True(), "TRUE")
+	assertValue(t, False(), "FALSE")
 
 	assertValue(t, command("COMMAND", staticExpression("<arg>", 0, false)), "COMMAND <arg>")
 
@@ -192,8 +193,8 @@ func TestLogicalExpression(t *testing.T) {
 	assertValue(t, a.Or(b).And(c.Or(d)), "(a OR b) AND (c OR d)")
 	assertValue(t, a.Or(b).And(c).Not(), "NOT ((a OR b) AND c)")
 
-	assertValue(t, And(), "1")
-	assertValue(t, Or(), "0")
+	assertValue(t, And(), "TRUE")
+	assertValue(t, Or(), "FALSE")
 }
 
 func TestLogicalOptimizer(t *testing.T) {
@@ -202,22 +203,27 @@ func TestLogicalOptimizer(t *testing.T) {
 	otherValue := staticExpression("<>", 0, false)
 	otherBoolValue := staticExpression("<>", 0, true)
 
-	assertValue(t, trueValue.Or(trueValue), "1")
-	assertValue(t, trueValue.Or(falseValue), "1")
-	assertValue(t, falseValue.Or(trueValue), "1")
-	assertValue(t, falseValue.Or(falseValue), "0")
+	assertValue(t, trueValue.Or(trueValue), "TRUE")
+	assertValue(t, trueValue.Or(falseValue), "TRUE")
+	assertValue(t, falseValue.Or(trueValue), "TRUE")
+	assertValue(t, falseValue.Or(falseValue), "FALSE")
 
-	assertValue(t, trueValue.And(trueValue), "1")
-	assertValue(t, trueValue.And(falseValue), "0")
-	assertValue(t, falseValue.And(trueValue), "0")
-	assertValue(t, falseValue.And(falseValue), "0")
+	assertValue(t, trueValue.And(trueValue), "TRUE")
+	assertValue(t, trueValue.And(falseValue), "FALSE")
+	assertValue(t, falseValue.And(trueValue), "FALSE")
+	assertValue(t, falseValue.And(falseValue), "FALSE")
 
-	assertValue(t, falseValue.Not(), "1")
-	assertValue(t, trueValue.Not(), "0")
+	assertValue(t, falseValue.Not(), "TRUE")
+	assertValue(t, trueValue.Not(), "FALSE")
 
-	assertValue(t, trueValue.And(otherValue), "1 AND <>")
-	assertValue(t, trueValue.And(123), "1 AND 123")
-	assertValue(t, falseValue.Or(otherValue), "0 OR <>")
+	assertValue(t, trueValue.And(otherValue), "TRUE AND <>")
+	assertValue(t, trueValue.Or(otherValue), "TRUE")
+	assertValue(t, trueValue.And(123), "TRUE AND 123")
+	assertValue(t, trueValue.Or(123), "TRUE")
+	assertValue(t, falseValue.And(otherValue), "FALSE")
+	assertValue(t, falseValue.Or(otherValue), "FALSE OR <>")
+	assertValue(t, falseValue.And(123), "FALSE")
+	assertValue(t, falseValue.Or(123), "FALSE OR 123")
 
 	assertValue(t, trueValue.And(otherBoolValue), "<>")
 	assertValue(t, falseValue.Or(otherBoolValue), "<>")

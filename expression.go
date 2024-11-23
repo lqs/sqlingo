@@ -165,7 +165,7 @@ func staticExpression(sql string, priority priority, isBool bool) expression {
 
 func True() BooleanExpression {
 	return expression{
-		sql:    "1",
+		sql:    "TRUE",
 		isTrue: true,
 		isBool: true,
 	}
@@ -173,7 +173,7 @@ func True() BooleanExpression {
 
 func False() BooleanExpression {
 	return expression{
-		sql:     "0",
+		sql:     "FALSE",
 		isFalse: true,
 		isBool:  true,
 	}

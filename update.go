@@ -103,13 +103,8 @@ func (s updateStatus) GetSQL() (string, error) {
 	sb.WriteString(" SET ")
 	sb.WriteString(assignmentsSql)
 
-	if s.where != nil {
-		whereSql, err := s.where.GetSQL(s.scope)
-		if err != nil {
-			return "", err
-		}
-		sb.WriteString(" WHERE ")
-		sb.WriteString(whereSql)
+	if err := appendWhere(&sb, s.scope, s.where); err != nil {
+		return "", err
 	}
 
 	if len(s.orderBys) > 0 {

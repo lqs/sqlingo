@@ -10,7 +10,7 @@ func TestUpdate(t *testing.T) {
 	db := newMockDatabase()
 
 	_, _ = db.Update(Table1).Set(field1, field2).Where(True()).Execute()
-	assertLastSql(t, "UPDATE `table1` SET `field1` = `field2` WHERE 1")
+	assertLastSql(t, "UPDATE `table1` SET `field1` = `field2`")
 
 	_, _ = db.Update(Table1).
 		Set(field1, 10).
@@ -25,7 +25,7 @@ func TestUpdate(t *testing.T) {
 		SetIf(false, field2, 10).
 		Where(True()).
 		Execute()
-	assertLastSql(t, "UPDATE `table1` SET `field1` = 10 WHERE 1")
+	assertLastSql(t, "UPDATE `table1` SET `field1` = 10")
 
 	_, _ = db.Update(Table1).
 		SetIf(false, field1, 10).
