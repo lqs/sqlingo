@@ -158,11 +158,11 @@ func (s insertStatus) GetSQL() (string, error) {
 				if i > 0 {
 					valuesBuilder.WriteString(", ")
 				}
-				valuesBuilder.WriteByte('(')
+				valuesBuilder.WriteString("(")
 				if err := commaValuesBuilder(s.scope, &valuesBuilder, model.GetValues()); err != nil {
 					return "", err
 				}
-				valuesBuilder.WriteByte(')')
+				valuesBuilder.WriteString(")")
 			}
 		}
 	} else {
