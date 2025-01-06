@@ -95,7 +95,9 @@ func commaTables(scope scope, tables []Table) string {
 }
 
 func commaValuesBuilder(scope scope, builder *strings.Builder, values []interface{}) error {
-	builder.Grow(16 * (len(values) + 2)) // hopefully reduce copying
+	if len(values) == 0 {
+		return nil
+	}
 	for i, item := range values {
 		if i > 0 {
 			builder.WriteString(", ")
