@@ -94,25 +94,17 @@ func commaTables(scope scope, tables []Table) string {
 	return sqlBuilder.String()
 }
 
-func commaValuesBuilder(scope scope, builder *strings.Builder, values []interface{}) error {
-	builder.Grow(16 * (len(values) + 2)) // hopefully reduce copying
+func commaValues(scope scope, values []interface{}) (string, error) {
+	var sqlBuilder strings.Builder
 	for i, item := range values {
 		if i > 0 {
-			builder.WriteString(", ")
+			sqlBuilder.WriteString(", ")
 		}
 		itemSql, _, err := getSQL(scope, item)
 		if err != nil {
-			return err
+			return "", err
 		}
-		builder.WriteString(itemSql)
-	}
-	return nil
-}
-
-func commaValues(scope scope, values []interface{}) (string, error) {
-	var sqlBuilder strings.Builder
-	if err := commaValuesBuilder(scope, &sqlBuilder, values); err != nil {
-		return "", err
+		sqlBuilder.WriteString(itemSql)
 	}
 	return sqlBuilder.String(), nil
 }
