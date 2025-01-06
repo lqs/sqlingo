@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 type insertStatus struct {
@@ -138,7 +139,7 @@ func (s insertStatus) OnDuplicateKeyIgnore() toInsertFinal {
 
 func (s insertStatus) GetSQL() (string, error) {
 	var fields []Field
-	var values []interface{}
+	var valuesBuilder strings.Builder
 	if len(s.models) > 0 {
 		models := make([]Model, 0, len(s.models))
 		for _, model := range s.models {
@@ -149,11 +150,19 @@ func (s insertStatus) GetSQL() (string, error) {
 
 		if len(models) > 0 {
 			fields = models[0].GetTable().GetFields()
-			for _, model := range models {
+			valuesBuilder.Grow(64 * len(models))
+			for i, model := range models {
 				if model.GetTable().GetName() != s.scope.Tables[0].GetName() {
 					return "", errors.New("invalid table from model")
 				}
-				values = append(values, model.GetValues())
+				if i > 0 {
+					valuesBuilder.WriteString(", ")
+				}
+				valuesBuilder.WriteString("(")
+				if err := commaValuesBuilder(s.scope, &valuesBuilder, model.GetValues()); err != nil {
+					return "", err
+				}
+				valuesBuilder.WriteString(")")
 			}
 		}
 	} else {
@@ -162,10 +171,12 @@ func (s insertStatus) GetSQL() (string, error) {
 		} else {
 			fields = s.fields
 		}
-		values = s.values
+		if err := commaValuesBuilder(s.scope, &valuesBuilder, s.values); err != nil {
+			return "", err
+		}
 	}
 
-	if len(values) == 0 {
+	if valuesBuilder.Len() == 0 {
 		return "/* INSERT without VALUES */ DO 0", nil
 	}
 
@@ -174,12 +185,8 @@ func (s insertStatus) GetSQL() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	valuesSql, err := commaValues(s.scope, values)
-	if err != nil {
-		return "", err
-	}
 
-	sqlString := s.method + " INTO " + tableSql + " (" + fieldsSql + ") VALUES " + valuesSql
+	sqlString := s.method + " INTO " + tableSql + " (" + fieldsSql + ") VALUES " + valuesBuilder.String()
 	if len(s.onDuplicateKeyUpdateAssignments) > 0 {
 		assignmentsSql, err := commaAssignments(s.scope, s.onDuplicateKeyUpdateAssignments)
 		if err != nil {
