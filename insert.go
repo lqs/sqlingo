@@ -28,7 +28,7 @@ type insertWithValues interface {
 	toInsertWithContext
 	toInsertFinal
 	Values(values ...interface{}) insertWithValues
-	OnDuplicateKeyIgnore() toInsertFinal
+	OnDuplicateKeyIgnore() toInsertWithDuplicateKey
 	OnDuplicateKeyUpdate() insertWithOnDuplicateKeyUpdateBegin
 }
 
@@ -36,7 +36,7 @@ type insertWithModels interface {
 	toInsertWithContext
 	toInsertFinal
 	Models(models ...interface{}) insertWithModels
-	OnDuplicateKeyIgnore() toInsertFinal
+	OnDuplicateKeyIgnore() toInsertWithDuplicateKey
 	OnDuplicateKeyUpdate() insertWithOnDuplicateKeyUpdateBegin
 }
 
@@ -46,10 +46,8 @@ type insertWithOnDuplicateKeyUpdateBegin interface {
 }
 
 type insertWithOnDuplicateKeyUpdate interface {
-	toInsertWithContext
-	toInsertFinal
-	Set(Field Field, value interface{}) insertWithOnDuplicateKeyUpdate
-	SetIf(condition bool, Field Field, value interface{}) insertWithOnDuplicateKeyUpdate
+	insertWithOnDuplicateKeyUpdateBegin
+	toInsertWithDuplicateKey
 }
 
 type toInsertWithContext interface {
@@ -59,6 +57,11 @@ type toInsertWithContext interface {
 type toInsertFinal interface {
 	GetSQL() (string, error)
 	Execute() (result sql.Result, err error)
+}
+
+type toInsertWithDuplicateKey interface {
+	toInsertWithContext
+	toInsertFinal
 }
 
 func (d *database) InsertInto(table Table) insertWithTable {
@@ -131,7 +134,7 @@ func (s insertStatus) Set(field Field, value interface{}) insertWithOnDuplicateK
 	return s
 }
 
-func (s insertStatus) OnDuplicateKeyIgnore() toInsertFinal {
+func (s insertStatus) OnDuplicateKeyIgnore() toInsertWithDuplicateKey {
 	firstField := s.scope.Tables[0].GetFields()[0]
 	return s.OnDuplicateKeyUpdate().Set(firstField, firstField)
 }
