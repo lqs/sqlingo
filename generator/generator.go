@@ -116,7 +116,7 @@ func getType(fieldDescriptor fieldDescriptor) (goType string, fieldClass string,
 		if !timeAsString {
 			goType = "time.Time"
 			fieldClass = "DateField"
-			fieldComment = "NOTICE: the range of datetime is [0000-01-01 00:00:00, 2038-01-19 11:14:07]"
+			fieldComment = "NOTICE: the range of datetime is [0000-01-01 00:00:00, 9999-12-31 23:59:59]"
 		} else {
 			goType = "string"
 			fieldClass = "StringField"
