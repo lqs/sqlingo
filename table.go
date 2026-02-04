@@ -24,7 +24,11 @@ func (t table) GetName() string {
 }
 
 func (t table) GetSQL(scope scope) string {
-	return t.sqlDialects[scope.Database.dialect]
+	dialect := dialectUnknown
+	if scope.Database != nil {
+		dialect = scope.Database.dialect
+	}
+	return t.sqlDialects[dialect]
 }
 
 func (t table) getOperatorPriority() int {
