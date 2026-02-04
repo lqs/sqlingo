@@ -580,7 +580,27 @@ func (e expression) Concat(other interface{}) StringExpression {
 }
 
 func (e expression) Contains(substring string) BooleanExpression {
-	return function("LOCATE", substring, e).GreaterThan(0)
+	return expression{builder: func(scope scope) (string, error) {
+		exprSQL, err := e.GetSQL(scope)
+		if err != nil {
+			return "", err
+		}
+		substringSQL := quoteString(substring)
+
+		dialect := dialectUnknown
+		if scope.Database != nil {
+			dialect = scope.Database.dialect
+		}
+
+		switch dialect {
+		case dialectPostgres:
+			return "STRPOS(" + exprSQL + ", " + substringSQL + ") > 0", nil
+		case dialectSqlite3:
+			return "INSTR(" + exprSQL + ", " + substringSQL + ") > 0", nil
+		default:
+			return "LOCATE(" + substringSQL + ", " + exprSQL + ") > 0", nil
+		}
+	}, priority: 11}
 }
 
 func (e expression) binaryOperation(operator string, value interface{}, priority priority, isBool bool) expression {
