@@ -81,6 +81,7 @@ type NumberExpression interface {
 // StringExpression is the interface of an SQL expression with string value.
 type StringExpression interface {
 	Expression
+	JsonExpression
 	Min() UnknownExpression
 	Max() UnknownExpression
 	Like(other interface{}) BooleanExpression
@@ -134,6 +135,17 @@ type UnknownExpression interface {
 	Left(count interface{}) StringExpression
 	Right(count interface{}) StringExpression
 	Trim() StringExpression
+
+	JsonType() StringExpression
+	JsonValid() BooleanExpression
+	JsonDepth() NumberExpression
+	JsonLength() NumberExpression
+	JsonExtract(paths ...string) StringExpression
+	JsonUnquote() UnknownExpression
+	JsonMergePatch(others ...interface{}) StringExpression
+	JsonMergePreserve(others ...interface{}) StringExpression
+	JsonContainsPathOne(paths ...string) BooleanExpression
+	JsonContainsPathAll(paths ...string) BooleanExpression
 }
 
 type expression struct {
