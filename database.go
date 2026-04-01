@@ -26,6 +26,10 @@ type Database interface {
 	GetDB() *sql.DB
 	// BeginTx starts a transaction and executes the function f.
 	BeginTx(ctx context.Context, opts *sql.TxOptions, f func(tx Transaction) error) error
+	// EnsureTx ensures the function f runs within a transaction.
+	// If ctx already contains a transaction started by a previous EnsureTx call, it reuses that transaction.
+	// Otherwise, it begins a new transaction and stores it in the context.
+	EnsureTx(ctx context.Context, opts *sql.TxOptions, f func(ctx context.Context) error) error
 	// Query executes a query and returns the cursor
 	Query(sql string) (Cursor, error)
 	// QueryContext executes a query with context and returns the cursor
@@ -187,9 +191,14 @@ func (d database) GetDB() *sql.DB {
 	return d.db
 }
 
-func (d database) getTxOrDB() txOrDB {
+func (d database) getTxOrDB(ctx context.Context) txOrDB {
 	if d.tx != nil {
 		return d.tx
+	}
+	if ctx != nil {
+		if tx, ok := ctx.Value(txContextKey{}).(Transaction); ok {
+			return tx.GetTx()
+		}
 	}
 	return d.db
 }
@@ -229,7 +238,7 @@ func (d database) queryContextOnce(ctx context.Context, sqlString string, retry 
 	interceptor := d.interceptor
 	var rows *sql.Rows
 	invoker := func(ctx context.Context, sql string) (err error) {
-		rows, err = d.getTxOrDB().QueryContext(ctx, sql)
+		rows, err = d.getTxOrDB(ctx).QueryContext(ctx, sql)
 		return
 	}
 
@@ -266,7 +275,7 @@ func (d database) ExecuteContext(ctx context.Context, sqlString string) (sql.Res
 
 	var result sql.Result
 	invoker := func(ctx context.Context, sql string) (err error) {
-		result, err = d.getTxOrDB().ExecContext(ctx, sql)
+		result, err = d.getTxOrDB(ctx).ExecContext(ctx, sql)
 		return
 	}
 	var err error
