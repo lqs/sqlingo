@@ -139,7 +139,7 @@ func commaOrderBys(scope scope, orderBys []OrderBy) (string, error) {
 	return sqlBuilder.String(), nil
 }
 
-func getCallerInfo(db database, retry bool) string {
+func getCallerInfo(db *database, retry bool) string {
 	if !db.enableCallerInfo {
 		return ""
 	}

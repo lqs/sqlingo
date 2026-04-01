@@ -187,11 +187,11 @@ func Use(driverName string, sqlDB *sql.DB) Database {
 	}
 }
 
-func (d database) GetDB() *sql.DB {
+func (d *database) GetDB() *sql.DB {
 	return d.db
 }
 
-func (d database) getTxOrDB(ctx context.Context) txOrDB {
+func (d *database) getTxOrDB(ctx context.Context) txOrDB {
 	if d.tx != nil {
 		return d.tx
 	}
@@ -203,11 +203,11 @@ func (d database) getTxOrDB(ctx context.Context) txOrDB {
 	return d.db
 }
 
-func (d database) Query(sqlString string) (Cursor, error) {
+func (d *database) Query(sqlString string) (Cursor, error) {
 	return d.QueryContext(context.Background(), sqlString)
 }
 
-func (d database) QueryContext(ctx context.Context, sqlString string) (Cursor, error) {
+func (d *database) QueryContext(ctx context.Context, sqlString string) (Cursor, error) {
 	isRetry := false
 	for {
 		sqlStringWithCallerInfo := getCallerInfo(d, isRetry) + sqlString
@@ -223,7 +223,7 @@ func (d database) QueryContext(ctx context.Context, sqlString string) (Cursor, e
 	}
 }
 
-func (d database) queryContextOnce(ctx context.Context, sqlString string, retry bool) (*sql.Rows, error) {
+func (d *database) queryContextOnce(ctx context.Context, sqlString string, retry bool) (*sql.Rows, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -255,12 +255,12 @@ func (d database) queryContextOnce(ctx context.Context, sqlString string, retry 
 	return rows, nil
 }
 
-func (d database) Execute(sqlString string) (sql.Result, error) {
+func (d *database) Execute(sqlString string) (sql.Result, error) {
 	return d.ExecuteContext(context.Background(), sqlString)
 }
 
 // ExecuteContext todo Is there need retry?
-func (d database) ExecuteContext(ctx context.Context, sqlString string) (sql.Result, error) {
+func (d *database) ExecuteContext(ctx context.Context, sqlString string) (sql.Result, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
